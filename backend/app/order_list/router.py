@@ -1,10 +1,12 @@
-
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+from app.core.security import get_current_approver
 from app.order_list.schemas import (
     OrderListCreate,
     OrderListUpdate,
@@ -19,6 +21,10 @@ router = APIRouter(
 )
 
 
+class ApproveRejectBody(BaseModel):
+    """Optional request body for approve/reject actions."""
+    approved_by: Optional[str] = "System"
+
 
 @router.post(
     "",
@@ -29,11 +35,7 @@ def create_order(
     order: OrderListCreate,
     db: Session = Depends(get_db)
 ):
-    return OrderListService.create_order(
-        db,
-        order
-    )
-
+    return OrderListService.create_order(db, order)
 
 
 @router.get(
@@ -48,12 +50,7 @@ def get_orders(
     if retailer_id is None and status is None:
         return OrderListService.get_all_orders(db)
 
-    return OrderListService.filter_orders(
-        db,
-        retailer_id,
-        status
-    )
-
+    return OrderListService.filter_orders(db, retailer_id, status)
 
 
 @router.get(
@@ -63,10 +60,7 @@ def get_orders(
 def get_order_analytics(
     db: Session = Depends(get_db)
 ):
-    return OrderListService.get_order_analytics(
-        db
-    )
-
+    return OrderListService.get_order_analytics(db)
 
 
 @router.get(
@@ -75,9 +69,7 @@ def get_order_analytics(
 def export_orders_csv(
     db: Session = Depends(get_db)
 ):
-    return OrderListService.export_orders_csv(
-        db
-    )
+    return OrderListService.export_orders_csv(db)
 
 
 @router.get(
@@ -88,11 +80,7 @@ def get_order(
     order_list_id: int,
     db: Session = Depends(get_db)
 ):
-    return OrderListService.get_order_by_id(
-        db,
-        order_list_id
-    )
-
+    return OrderListService.get_order_by_id(db, order_list_id)
 
 
 @router.put(
@@ -104,12 +92,7 @@ def update_order(
     order: OrderListUpdate,
     db: Session = Depends(get_db)
 ):
-    return OrderListService.update_order(
-        db,
-        order_list_id,
-        order
-    )
-
+    return OrderListService.update_order(db, order_list_id, order)
 
 
 @router.delete(
@@ -119,10 +102,8 @@ def delete_order(
     order_list_id: int,
     db: Session = Depends(get_db)
 ):
-    return OrderListService.delete_order(
-        db,
-        order_list_id
-    )
+    return OrderListService.delete_order(db, order_list_id)
+
 
 @router.put(
     "/{order_list_id}/approve",
@@ -130,12 +111,15 @@ def delete_order(
 )
 def approve_order(
     order_list_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    approver: str = Depends(get_current_approver)
 ):
     return OrderListService.approve_order(
         db,
-        order_list_id
+        order_list_id,
+        approved_by=approver
     )
+
 
 @router.put(
     "/{order_list_id}/reject",
@@ -143,9 +127,11 @@ def approve_order(
 )
 def reject_order(
     order_list_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    approver: str = Depends(get_current_approver)
 ):
     return OrderListService.reject_order(
         db,
-        order_list_id
+        order_list_id,
+        approved_by=approver
     )

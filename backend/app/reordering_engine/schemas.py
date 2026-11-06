@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -18,7 +18,7 @@ class ReorderRecommendation(BaseModel):
 
     reorder_quantity: int
 
-    supplier_id: int
+    supplier_id: Optional[int] = None
     supplier_name: str
 
     estimated_lead_time: int

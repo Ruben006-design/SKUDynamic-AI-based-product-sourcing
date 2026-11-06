@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Typography,
@@ -9,6 +10,8 @@ import {
   Divider,
   Button,
   Chip,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
@@ -18,7 +21,52 @@ import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 
+import api from "../services/api";
+
 function Settings() {
+  // Appearance state
+  const [darkMode, setDarkMode] = useState(true);
+  const [animations, setAnimations] = useState(true);
+  const [compactSidebar, setCompactSidebar] = useState(false);
+
+  // AI config state
+  const [autoGenerateOrders, setAutoGenerateOrders] = useState(true);
+
+  // Notification state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  function showMessage(message, severity = "success") {
+    setSnackbar({ open: true, message, severity });
+  }
+
+  async function handleExportCSV() {
+    try {
+      const response = await api.get("/order-list/export/csv", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "order_list.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showMessage("Orders exported successfully.");
+    } catch {
+      showMessage("Export failed. Please try again.", "error");
+    }
+  }
+
+  const lastSyncTime = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   return (
     <Box>
       {/* Header */}
@@ -74,7 +122,17 @@ function Settings() {
                       Use the premium dark theme across the dashboard
                     </Typography>
                   </Box>
-                  <Switch checked />
+                  <Switch
+                    checked={darkMode}
+                    onChange={(e) => {
+                      setDarkMode(e.target.checked);
+                      showMessage(
+                        e.target.checked
+                          ? "Dark mode enabled."
+                          : "Dark mode disabled."
+                      );
+                    }}
+                  />
                 </Stack>
 
                 <Divider />
@@ -86,7 +144,10 @@ function Settings() {
                       Smooth transitions and hover effects
                     </Typography>
                   </Box>
-                  <Switch checked />
+                  <Switch
+                    checked={animations}
+                    onChange={(e) => setAnimations(e.target.checked)}
+                  />
                 </Stack>
 
                 <Divider />
@@ -98,7 +159,10 @@ function Settings() {
                       Reduce sidebar width for more workspace
                     </Typography>
                   </Box>
-                  <Switch />
+                  <Switch
+                    checked={compactSidebar}
+                    onChange={(e) => setCompactSidebar(e.target.checked)}
+                  />
                 </Stack>
               </Stack>
             </CardContent>
@@ -118,15 +182,15 @@ function Settings() {
 
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography fontWeight={600}>Gemini Model</Typography>
-                  <Chip label="gemini-2.5-flash" color="success" />
+                  <Typography fontWeight={600}>AI Engine</Typography>
+                  <Chip label="Local Statistical Engine" color="success" />
                 </Stack>
 
                 <Divider />
 
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography fontWeight={600}>Reorder Threshold</Typography>
-                  <Chip label="55" color="primary" />
+                  <Chip label="55 / 100" color="primary" />
                 </Stack>
 
                 <Divider />
@@ -138,7 +202,10 @@ function Settings() {
                       Create pending orders automatically when AI recommends a reorder
                     </Typography>
                   </Box>
-                  <Switch checked />
+                  <Switch
+                    checked={autoGenerateOrders}
+                    onChange={(e) => setAutoGenerateOrders(e.target.checked)}
+                  />
                 </Stack>
               </Stack>
             </CardContent>
@@ -174,7 +241,7 @@ function Settings() {
 
                 <Stack direction="row" justifyContent="space-between">
                   <Typography color="text.secondary">Last Sync</Typography>
-                  <Typography fontWeight={600}>Just now</Typography>
+                  <Typography fontWeight={600}>{lastSyncTime}</Typography>
                 </Stack>
               </Stack>
             </CardContent>
@@ -188,7 +255,7 @@ function Settings() {
               <Stack direction="row" spacing={2} alignItems="center" mb={2}>
                 <DownloadRoundedIcon color="primary" />
                 <Typography variant="h6" fontWeight={700}>
-                  Export & Backup
+                  Export &amp; Backup
                 </Typography>
               </Stack>
 
@@ -197,11 +264,19 @@ function Settings() {
               </Typography>
 
               <Stack direction="row" spacing={2}>
-                <Button variant="contained" startIcon={<DownloadRoundedIcon />}>
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadRoundedIcon />}
+                  onClick={handleExportCSV}
+                >
                   Export CSV
                 </Button>
 
-                <Button variant="outlined">
+                <Button
+                  variant="outlined"
+                  disabled
+                  title="Coming soon"
+                >
                   Backup Data
                 </Button>
               </Stack>
@@ -228,7 +303,7 @@ function Settings() {
 
             <Grid size={{ xs: 12, md: 3 }}>
               <Typography color="text.secondary">AI Engine</Typography>
-              <Typography fontWeight={600}>Gemini 2.5 Flash</Typography>
+              <Typography fontWeight={600}>Local Statistical Engine v1</Typography>
             </Grid>
 
             <Grid size={{ xs: 12, md: 3 }}>
@@ -243,6 +318,21 @@ function Settings() {
           </Grid>
         </CardContent>
       </Card>
+
+      {/* Notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -1,10 +1,12 @@
 from decimal import Decimal
 
 from sqlalchemy import (
+    Index,
     Integer,
     Numeric,
     ForeignKey,
     TIMESTAMP,
+    UniqueConstraint,
     text
 )
 from sqlalchemy.orm import (
@@ -23,6 +25,13 @@ class Inventory(Base):
     """
 
     __tablename__ = "Inventory"
+
+    __table_args__ = (
+        # Enforce one inventory record per product
+        UniqueConstraint("product_id", name="uq_inventory_product_id"),
+        Index("ix_inventory_product_id", "product_id"),
+        Index("ix_inventory_retailer_id", "retailer_id"),
+    )
 
     inventory_id: Mapped[int] = mapped_column(
         primary_key=True,

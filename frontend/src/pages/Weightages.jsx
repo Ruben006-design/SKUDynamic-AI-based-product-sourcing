@@ -273,20 +273,21 @@ function Weightages() {
       field: "recommendation_score",
       headerName: "AI Score",
       width: 150,
-      renderCell: (params) => (
-        <Chip
-          color={
-            params.value >= 0.8
-              ? "success"
-              : params.value >= 0.6
-              ? "warning"
-              : "error"
-          }
-          label={`${(
-            params.value * 100
-          ).toFixed(1)}%`}
-        />
-      ),
+      renderCell: (params) => {
+        const val = Number(params?.value ?? 0);
+        return (
+          <Chip
+            color={
+              val >= 70
+                ? "success"
+                : val >= 45
+                ? "warning"
+                : "error"
+            }
+            label={`${val.toFixed(1)}/100`}
+          />
+        );
+      },
     },
     {
       field: "llm_model_used",

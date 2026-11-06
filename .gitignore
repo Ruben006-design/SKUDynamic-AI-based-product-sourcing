@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.pytest_cache/
 
 # Virtual Environment
 venv/
@@ -11,6 +12,7 @@ env/
 
 # Environment variables
 .env
+*.env
 
 # Logs
 *.log

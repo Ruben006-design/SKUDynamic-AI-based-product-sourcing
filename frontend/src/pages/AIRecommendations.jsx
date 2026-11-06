@@ -28,7 +28,6 @@ function AIRecommendations() {
   const [products, setProducts] = useState([]);
   const [retailers, setRetailers] = useState([]);
   const [weightConfigs, setWeightConfigs] = useState([]);
-  
 
   useEffect(() => {
     async function loadData() {
@@ -43,12 +42,8 @@ function AIRecommendations() {
         setProducts(productsData);
         setRetailers(retailersData);
         setWeightConfigs(configsData);
-
-        console.log("Products:", productsData);
-        console.log("Retailers:", retailersData);
-        console.log("Weight Configs:", configsData);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Silently handled — components degrade gracefully
       } finally {
         setLoading(false);
       }
@@ -108,7 +103,7 @@ function AIRecommendations() {
               </Typography>
 
               <Typography color="text.secondary">
-                Gemini AI engine connected successfully.
+                Local statistical engine active — no external API required.
               </Typography>
 
               <Chip

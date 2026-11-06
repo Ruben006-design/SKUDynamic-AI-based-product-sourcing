@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -25,6 +26,12 @@ class OrderList(Base):
     """
 
     __tablename__ = "Order_List"
+
+    __table_args__ = (
+        Index("ix_orderlist_product_id", "product_id"),
+        Index("ix_orderlist_retailer_id", "retailer_id"),
+        Index("ix_orderlist_status", "status"),
+    )
 
     order_list_id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -85,7 +92,6 @@ class OrderList(Base):
         TIMESTAMP,
         server_default=text("CURRENT_TIMESTAMP")
     )
-
 
     product = relationship(
         "Product",

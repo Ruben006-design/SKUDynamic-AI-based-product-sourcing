@@ -26,6 +26,7 @@ import {
   getRetailers,
   getWeightConfigs,
 } from "../services/dashboardService";
+
 function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,57 +54,35 @@ function Dashboard() {
           getWeightConfigs(),
         ]);
 
-        console.log("Products:", results[0]);
-        console.log("Suppliers:", results[1]);
-        console.log("Inventories:", results[2]);
-        console.log("Analytics:", results[3]);
-        console.log("Orders:", results[4]);
-        console.log("Retailers:", results[5]);
-        console.log("Weight Configs:", results[6]);
-        console.log(results);
-
         if (results[0].status === "fulfilled") {
           setProducts(results[0].value);
-        } else {
-          console.error("Products API failed", results[0].reason);
         }
 
         if (results[1].status === "fulfilled") {
           setSuppliers(results[1].value);
-        } else {
-          console.error("Suppliers API failed", results[1].reason);
         }
 
         if (results[2].status === "fulfilled") {
           setInventories(results[2].value);
-        } else {
-          console.error("Inventories API failed", results[2].reason);
         }
+
         if (results[3].status === "fulfilled") {
           setAnalytics(results[3].value);
-        } else {
-          console.error("Analytics API failed", results[3].reason);
         }
 
         if (results[4].status === "fulfilled") {
           setOrders(results[4].value);
-        } else {
-          console.error("Orders API failed", results[4].reason);
         }
+
         if (results[5].status === "fulfilled") {
           setRetailers(results[5].value);
-        } else {
-          console.error("Retailers API failed", results[5].reason);
         }
 
         if (results[6].status === "fulfilled") {
           setWeightConfigs(results[6].value);
-        } else {
-          console.error("Weight Config API failed", results[6].reason);
         }
 
       } catch (err) {
-        console.error(err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -112,9 +91,7 @@ function Dashboard() {
 
     loadDashboard();
   }, []);
-  console.log("Products State:", products);
-  console.log("Retailers State:", retailers);
-  console.log("WeightConfigs State:", weightConfigs);
+
   if (loading) {
     return (
       <Box
@@ -129,7 +106,7 @@ function Dashboard() {
       </Box>
     );
   }
-    return (
+  return (
     <>
       {error && <Alert severity="error">{error}</Alert>}
 

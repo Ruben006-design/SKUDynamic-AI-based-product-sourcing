@@ -1,6 +1,7 @@
 
 from sqlalchemy import (
     ForeignKey,
+    Index,
     Numeric,
     String,
     TIMESTAMP,
@@ -23,6 +24,13 @@ class Weightage(Base):
 
     __tablename__ = "Weightage"
 
+    __table_args__ = (
+        # Speed up queries filtering by product, retailer, or config
+        Index("ix_weightage_product_id", "product_id"),
+        Index("ix_weightage_retailer_id", "retailer_id"),
+        Index("ix_weightage_config_id", "config_id"),
+    )
+
     weightage_id: Mapped[int] = mapped_column(
         primary_key=True,
         autoincrement=True
@@ -42,38 +50,40 @@ class Weightage(Base):
         ForeignKey("Weight_Config.config_id")
     )
 
+    # Numeric(6,4) allows values like 0.3456 without precision loss
     sales_volume_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     lead_time_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     supplier_quality_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     popularity_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     weather_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     festival_demand_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     durability_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
     expiry_weight: Mapped[float] = mapped_column(
-        Numeric(5, 2)
+        Numeric(6, 4)
     )
 
+    # Score is on a 0–100 scale
     recommendation_score: Mapped[float | None] = mapped_column(
         Numeric(6, 2)
     )

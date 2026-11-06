@@ -68,3 +68,18 @@ class ProductRepository:
             )
             .all()
         )
+
+    @staticmethod
+    def get_by_retailer_id(
+        db: Session,
+        retailer_id: int
+    ):
+        """
+        Returns all products belonging to a specific retailer.
+        """
+
+        return (
+            db.query(Product)
+            .filter(Product.retailer_id == retailer_id)
+            .all()
+        )

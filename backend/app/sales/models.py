@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy import (
     Date,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String
@@ -18,6 +19,13 @@ class Sales(Base):
     """
 
     __tablename__ = "Sales"
+
+    __table_args__ = (
+        # Indexes for fast filtering by product, retailer and date
+        Index("ix_sales_product_id", "product_id"),
+        Index("ix_sales_retailer_id", "retailer_id"),
+        Index("ix_sales_sale_date", "sale_date"),
+    )
 
     sale_id: Mapped[int] = mapped_column(
         primary_key=True,

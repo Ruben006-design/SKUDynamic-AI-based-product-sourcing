@@ -16,7 +16,6 @@ class PromptBuilder:
 
         prompt = []
 
-
         prompt.append(
             "You are an AI inventory optimization assistant."
         )
@@ -31,13 +30,12 @@ class PromptBuilder:
 
         prompt.append("")
 
-        prompt.append("=== RETAILER ===")
-
-        prompt.append(
-            f"Retailer ID: {retailer.retailer_id}"
-        )
-
-        prompt.append("")
+        if retailer is not None:
+            prompt.append("=== RETAILER ===")
+            prompt.append(
+                f"Retailer ID: {retailer.retailer_id}"
+            )
+            prompt.append("")
 
         prompt.append(
             "=== WEIGHT CONFIGURATION ==="
@@ -63,7 +61,6 @@ class PromptBuilder:
         """
         )
 
-
         prompt.append("")
 
         prompt.append("=== INVENTORY ===")
@@ -85,7 +82,6 @@ EOQ: {inventory.eoq}
             prompt.append(
                 "No inventory available."
             )
-
 
         prompt.append("")
 
@@ -111,23 +107,28 @@ Sales Channel: {sale.sales_channel}
                 "No sales history available."
             )
 
-
         prompt.append("")
 
         prompt.append("=== SUPPLIERS ===")
 
         if suppliers:
 
-            for supplier in suppliers:
-
-                prompt.append(str(supplier))
+            for ps in suppliers:
+                s = getattr(ps, "supplier", None)
+                if s:
+                    prompt.append(
+                        f"Supplier: {s.supplier_name} "
+                        f"| Quality: {s.quality_score} "
+                        f"| Lead Time: {s.lead_time_days} days "
+                        f"| Negotiated Price: {getattr(ps, 'negotiated_price', 'N/A')} "
+                        f"| Preferred: {getattr(ps, 'is_preferred', False)}"
+                    )
 
         else:
 
             prompt.append(
                 "No supplier information available."
             )
-
 
         prompt.append("")
 
@@ -137,16 +138,21 @@ Sales Channel: {sale.sales_channel}
 
         if human_evaluations:
 
-            for evaluation in human_evaluations:
-
-                prompt.append(str(evaluation))
+            for e in human_evaluations:
+                prompt.append(
+                    f"Evaluation ID: {getattr(e, 'eval_id', 'N/A')} "
+                    f"| Field: {getattr(e, 'field_name', 'N/A')} "
+                    f"| Old: {getattr(e, 'old_value', 'N/A')} "
+                    f"-> New: {getattr(e, 'new_value', 'N/A')} "
+                    f"| Reason: {getattr(e, 'override_reason', 'N/A')} "
+                    f"| By: {getattr(e, 'evaluated_by', 'N/A')}"
+                )
 
         else:
 
             prompt.append(
                 "No previous human evaluations available."
             )
-
 
         prompt.append("")
 

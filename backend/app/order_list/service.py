@@ -12,14 +12,7 @@ from app.order_list.schemas import (
     OrderListCreate,
     OrderListUpdate
 )
-from app.order_list.repository import (
-    OrderListRepository
-)
 
-
-from app.order_list.schemas import (
-    OrderListCreate
-)
 logger = logging.getLogger(__name__)
 
 
@@ -35,15 +28,10 @@ class OrderListService:
     ):
         logger.info("Creating order recommendation.")
 
-        return OrderListRepository.create(
-            db,
-            order
-        )
+        return OrderListRepository.create(db, order)
 
     @staticmethod
-    def get_all_orders(
-        db: Session
-    ):
+    def get_all_orders(db: Session):
         return OrderListRepository.get_all(db)
 
     @staticmethod
@@ -51,18 +39,11 @@ class OrderListService:
         db: Session,
         order_list_id: int
     ):
-        order = OrderListRepository.get_by_id(
-            db,
-            order_list_id
-        )
+        order = OrderListRepository.get_by_id(db, order_list_id)
 
         if order is None:
-            logger.warning(
-                f"Order recommendation {order_list_id} not found."
-            )
-            raise OrderListNotFoundException(
-                order_list_id
-            )
+            logger.warning("Order recommendation %s not found.", order_list_id)
+            raise OrderListNotFoundException(order_list_id)
 
         return order
 
@@ -72,55 +53,30 @@ class OrderListService:
         order_list_id: int,
         order_data: OrderListUpdate
     ):
-        logger.info(
-            f"Updating order recommendation {order_list_id}"
-        )
+        logger.info("Updating order recommendation %s", order_list_id)
 
-        order = OrderListRepository.get_by_id(
-            db,
-            order_list_id
-        )
+        order = OrderListRepository.get_by_id(db, order_list_id)
 
         if order is None:
-            logger.warning(
-                f"Order recommendation {order_list_id} not found."
-            )
-            raise OrderListNotFoundException(
-                order_list_id
-            )
+            logger.warning("Order recommendation %s not found.", order_list_id)
+            raise OrderListNotFoundException(order_list_id)
 
-        return OrderListRepository.update(
-            db,
-            order,
-            order_data
-        )
+        return OrderListRepository.update(db, order, order_data)
 
     @staticmethod
     def delete_order(
         db: Session,
         order_list_id: int
     ):
-        logger.info(
-            f"Deleting order recommendation {order_list_id}"
-        )
+        logger.info("Deleting order recommendation %s", order_list_id)
 
-        order = OrderListRepository.get_by_id(
-            db,
-            order_list_id
-        )
+        order = OrderListRepository.get_by_id(db, order_list_id)
 
         if order is None:
-            logger.warning(
-                f"Order recommendation {order_list_id} not found."
-            )
-            raise OrderListNotFoundException(
-                order_list_id
-            )
+            logger.warning("Order recommendation %s not found.", order_list_id)
+            raise OrderListNotFoundException(order_list_id)
 
-        return OrderListRepository.delete(
-            db,
-            order
-        )
+        return OrderListRepository.delete(db, order)
 
     @staticmethod
     def filter_orders(
@@ -128,66 +84,40 @@ class OrderListService:
         retailer_id: int | None = None,
         status: str | None = None
     ):
-        return OrderListRepository.filter_orders(
-            db,
-            retailer_id,
-            status
-        )
+        return OrderListRepository.filter_orders(db, retailer_id, status)
 
     @staticmethod
     def approve_order(
         db: Session,
-        order_list_id: int
+        order_list_id: int,
+        approved_by: str = "System"
     ):
-        logger.info(
-            "Approving order %s",
-            order_list_id
-        )
+        logger.info("Approving order %s by %s", order_list_id, approved_by)
 
-        order = OrderListRepository.get_by_id(
-            db,
-            order_list_id
-        )
+        order = OrderListRepository.get_by_id(db, order_list_id)
 
         if order is None:
-            raise OrderListNotFoundException(
-                order_list_id
-            )
+            raise OrderListNotFoundException(order_list_id)
 
-        return OrderListRepository.approve(
-            db,
-            order
-        )
+        return OrderListRepository.approve(db, order, approved_by=approved_by)
 
     @staticmethod
     def reject_order(
         db: Session,
-        order_list_id: int
+        order_list_id: int,
+        approved_by: str = "System"
     ):
-        logger.info(
-            "Rejecting order %s",
-            order_list_id
-        )
+        logger.info("Rejecting order %s by %s", order_list_id, approved_by)
 
-        order = OrderListRepository.get_by_id(
-            db,
-            order_list_id
-        )
+        order = OrderListRepository.get_by_id(db, order_list_id)
 
         if order is None:
-            raise OrderListNotFoundException(
-                order_list_id
-            )
+            raise OrderListNotFoundException(order_list_id)
 
-        return OrderListRepository.reject(
-            db,
-            order
-        )
+        return OrderListRepository.reject(db, order, approved_by=approved_by)
 
     @staticmethod
-    def export_orders_csv(
-        db: Session
-    ):
+    def export_orders_csv(db: Session):
         """
         Export all order recommendations as CSV.
         """
@@ -235,7 +165,5 @@ class OrderListService:
         )
 
     @staticmethod
-    def get_order_analytics(
-        db: Session
-    ):
+    def get_order_analytics(db: Session):
         return OrderListRepository.get_analytics(db)
