@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-
 import {
   Box,
   Button,
   Alert,
   Snackbar,
   Chip,
+  Stack,
+  Typography,
 } from "@mui/material";
-
 import MuiAlert from "@mui/material/Alert";
 
 import RateReviewRoundedIcon from "@mui/icons-material/RateReviewRounded";
@@ -34,46 +34,23 @@ import HumanEvaluationDialog from "../components/humanEvaluation/HumanEvaluation
 import HumanEvaluationViewDialog from "../components/humanEvaluation/HumanEvaluationViewDialog";
 
 function HumanEvaluations() {
-  const [evaluations, setEvaluations] =
-    useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [filteredEvaluations, setFilteredEvaluations] = useState([]);
+  const [weightages, setWeightages] = useState([]);
+  const [retailers, setRetailers] = useState([]);
 
-  const [
-    filteredEvaluations,
-    setFilteredEvaluations,
-  ] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
 
-  const [weightages, setWeightages] =
-    useState([]);
-
-  const [retailers, setRetailers] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [openDialog, setOpenDialog] =
-    useState(false);
-
-  const [viewDialog, setViewDialog] =
-    useState(false);
-
-  const [deleteDialog, setDeleteDialog] =
-    useState(false);
-
-  const [
-    selectedEvaluation,
-    setSelectedEvaluation,
-  ] = useState(null);
-
-  const [snackbar, setSnackbar] =
-    useState({
-      open: false,
-      message: "",
-      severity: "success",
-    });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   useEffect(() => {
     loadEvaluations();
@@ -83,52 +60,34 @@ function HumanEvaluations() {
     try {
       setLoading(true);
 
-      const [
-        evaluationData,
-        weightageData,
-        retailerData,
-      ] = await Promise.all([
+      const [evaluationData, weightageData, retailerData] = await Promise.all([
         getEvaluations(),
         getWeightages(),
         getRetailers(),
       ]);
 
-      const retailerMap =
-        Object.fromEntries(
-          retailerData.map((r) => [
-            r.retailer_id,
-            r.retailer_name,
-          ])
-        );
+      const retailerMap = Object.fromEntries(
+        (retailerData || []).map((r) => [r.retailer_id, r.retailer_name])
+      );
 
-      const enriched =
-        evaluationData.map((e) => ({
-          ...e,
-          retailer_name:
-            retailerMap[e.retailer_id] ??
-            `#${e.retailer_id}`,
-        }));
+      const enriched = (evaluationData || []).map((e) => ({
+        ...e,
+        retailer_name: retailerMap[e.retailer_id] ?? `#${e.retailer_id}`,
+      }));
 
       setEvaluations(enriched);
       setFilteredEvaluations(enriched);
-
-      setWeightages(weightageData);
-      setRetailers(retailerData);
+      setWeightages(weightageData || []);
+      setRetailers(retailerData || []);
     } catch (err) {
       console.error(err);
-
-      setError(
-        "Failed to load evaluations."
-      );
+      setError("Failed to load human evaluations.");
     } finally {
       setLoading(false);
     }
   }
 
-  const showMessage = (
-    message,
-    severity = "success"
-  ) => {
+  const showMessage = (message, severity = "success") => {
     setSnackbar({
       open: true,
       message,
@@ -138,42 +97,26 @@ function HumanEvaluations() {
 
   const handleSearch = (value) => {
     const search = value.toLowerCase();
-
     setFilteredEvaluations(
       evaluations.filter(
         (e) =>
-          e.field_name
-            ?.toLowerCase()
-            .includes(search) ||
-          e.retailer_name
-            ?.toLowerCase()
-            .includes(search) ||
-          e.evaluated_by
-            ?.toLowerCase()
-            .includes(search)
+          e.retailer_name?.toLowerCase().includes(search) ||
+          e.field_name?.toLowerCase().includes(search) ||
+          e.evaluated_by?.toLowerCase().includes(search)
       )
     );
   };
 
   async function handleView(row) {
     try {
-      const data =
-        await getEvaluation(
-          row.eval_id
-        );
-
+      const evaluation = await getEvaluation(row.eval_id);
       setSelectedEvaluation({
-        ...data,
-        retailer_name:
-          row.retailer_name,
+        ...evaluation,
+        retailer_name: row.retailer_name,
       });
-
       setViewDialog(true);
     } catch {
-      showMessage(
-        "Unable to fetch evaluation.",
-        "error"
-      );
+      showMessage("Unable to fetch evaluation record.", "error");
     }
   }
 
@@ -187,108 +130,94 @@ function HumanEvaluations() {
     setDeleteDialog(true);
   }
 
-  async function handleSave(form) {
+  async function handleSave(data) {
     try {
       if (selectedEvaluation) {
-        await updateEvaluation(
-          selectedEvaluation.eval_id,
-          form
-        );
-
-        showMessage(
-          "Evaluation updated successfully."
-        );
+        await updateEvaluation(selectedEvaluation.eval_id, data);
+        showMessage("Evaluation updated successfully.");
       } else {
-        await createEvaluation(form);
-
-        showMessage(
-          "Evaluation created successfully."
-        );
+        await createEvaluation(data);
+        showMessage("Human feedback evaluation saved.");
       }
-
       setOpenDialog(false);
-      setSelectedEvaluation(null);
-
       loadEvaluations();
-    } catch (err) {
-      console.error(err);
-
-      showMessage(
-        "Operation failed.",
-        "error"
-      );
+    } catch {
+      showMessage("Failed to save evaluation.", "error");
     }
   }
 
   async function confirmDelete() {
     try {
-      await deleteEvaluation(
-        selectedEvaluation.eval_id
-      );
-
-      showMessage(
-        "Evaluation deleted successfully."
-      );
-
+      await deleteEvaluation(selectedEvaluation.eval_id);
+      showMessage("Evaluation deleted.");
       setDeleteDialog(false);
-
       loadEvaluations();
     } catch {
-      showMessage(
-        "Delete failed.",
-        "error"
-      );
+      showMessage("Delete failed.", "error");
     }
   }
-    const columns = [
+
+  const columns = [
     {
       field: "eval_id",
       headerName: "ID",
-      width: 80,
+      width: 70,
     },
     {
       field: "weightage_id",
-      headerName: "Weightage",
+      headerName: "Weight Profile",
       width: 120,
+      renderCell: (params) => (
+        <Typography variant="caption" sx={{ fontFamily: "monospace", fontWeight: 600 }}>
+          #{params.value}
+        </Typography>
+      ),
     },
     {
       field: "retailer_name",
-      headerName: "Retailer",
+      headerName: "Retail Facility",
       flex: 1,
     },
     {
       field: "field_name",
-      headerName: "Field",
-      flex: 1,
+      headerName: "Adjusted Parameter",
+      flex: 1.2,
       renderCell: (params) => (
         <Chip
+          variant="outlined"
           color="primary"
           label={params.value}
           size="small"
+          sx={{ fontWeight: 600, fontSize: "0.72rem", height: 22 }}
         />
       ),
     },
     {
       field: "old_value",
-      headerName: "Old Value",
-      width: 120,
+      headerName: "Previous Value",
+      width: 130,
+      valueFormatter: (value) => Number(value || 0).toFixed(4),
     },
     {
       field: "new_value",
-      headerName: "New Value",
-      width: 120,
+      headerName: "Human Override",
+      width: 130,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={700} color="secondary.main">
+          {Number(params.value || 0).toFixed(4)}
+        </Typography>
+      ),
     },
     {
       field: "evaluated_by",
-      headerName: "Evaluated By",
+      headerName: "Specialist",
       flex: 1,
     },
     {
       field: "evaluated_at",
-      headerName: "Evaluated At",
+      headerName: "Evaluation Date",
       flex: 1,
-      valueFormatter: (value) =>
-        new Date(value).toLocaleString(),
+      valueFormatter: (value) => (value ? new Date(value).toLocaleDateString() : "—"),
     },
   ];
 
@@ -297,11 +226,11 @@ function HumanEvaluations() {
   }
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
-        title="Human Evaluations"
-        subtitle="Review and override AI-generated recommendations."
-        icon={<RateReviewRoundedIcon />}
+        title="Human-in-the-Loop Feedback"
+        subtitle="Auditable manual overrides and specialist tuning applied to AI-calibrated weights"
+        icon={<RateReviewRoundedIcon color="primary" />}
         action={
           <Button
             variant="contained"
@@ -311,30 +240,36 @@ function HumanEvaluations() {
               setOpenDialog(true);
             }}
           >
-            Add Evaluation
+            Submit Feedback
           </Button>
         }
       />
 
-      {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          mb={2}
         >
-          {error}
-        </Alert>
-      )}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Feedback Evaluation Logs
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {filteredEvaluations.length} expert override records active
+            </Typography>
+          </Box>
+          <SearchBar placeholder="Search by parameter, specialist, or facility..." onSearch={handleSearch} />
+        </Stack>
 
-      <SearchBar
-        placeholder="Search evaluations..."
-        onSearch={handleSearch}
-      />
-
-      <Box mt={3}>
         {filteredEvaluations.length === 0 ? (
           <EmptyState
-            title="No Evaluations"
-            subtitle="No human evaluations found."
+            title="No Evaluation Records Found"
+            subtitle="No human overrides match your search query."
           />
         ) : (
           <EntityTable
@@ -349,6 +284,7 @@ function HumanEvaluations() {
         )}
       </Box>
 
+      {/* Dialogs */}
       <HumanEvaluationDialog
         open={openDialog}
         onClose={() => {
@@ -363,37 +299,24 @@ function HumanEvaluations() {
 
       <HumanEvaluationViewDialog
         open={viewDialog}
-        onClose={() =>
-          setViewDialog(false)
-        }
+        onClose={() => setViewDialog(false)}
         evaluation={selectedEvaluation}
       />
 
       <ConfirmDialog
         open={deleteDialog}
-        title="Delete Evaluation"
-        message={`Delete evaluation #${selectedEvaluation?.eval_id}?`}
-        onClose={() =>
-          setDeleteDialog(false)
-        }
+        title="Delete Human Feedback"
+        message="Are you sure you want to delete this evaluation override?"
+        onClose={() => setDeleteDialog(false)}
         onConfirm={confirmDelete}
       />
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() =>
-          setSnackbar({
-            ...snackbar,
-            open: false,
-          })
-        }
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <MuiAlert
-          elevation={6}
-          variant="filled"
-          severity={snackbar.severity}
-        >
+        <MuiAlert elevation={6} variant="filled" severity={snackbar.severity}>
           {snackbar.message}
         </MuiAlert>
       </Snackbar>

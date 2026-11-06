@@ -5,22 +5,21 @@ import {
 } from "@mui/material";
 
 function LoadingSpinner({
-  message = "Loading..."
+  message = "Loading...",
 }) {
   return (
     <Box
       sx={{
-        height: "60vh",
+        minHeight: "50vh",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "column",
-        gap: 2,
+        gap: 1.8,
       }}
     >
-      <CircularProgress size={50} />
-
-      <Typography color="text.secondary">
+      <CircularProgress size={32} thickness={4} color="primary" />
+      <Typography variant="body2" color="text.secondary" fontWeight={500}>
         {message}
       </Typography>
     </Box>

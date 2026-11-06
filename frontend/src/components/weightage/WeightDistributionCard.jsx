@@ -5,116 +5,108 @@ import {
   Stack,
   LinearProgress,
   Divider,
+  Grid,
+  Box,
+  Chip,
 } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
+import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 
 const factors = [
-  {
-    key: "sales_volume_weight",
-    label: "Sales Volume",
-  },
-  {
-    key: "lead_time_weight",
-    label: "Lead Time",
-  },
-  {
-    key: "supplier_quality_weight",
-    label: "Supplier Quality",
-  },
-  {
-    key: "popularity_weight",
-    label: "Popularity",
-  },
-  {
-    key: "weather_weight",
-    label: "Weather",
-  },
-  {
-    key: "festival_demand_weight",
-    label: "Festival Demand",
-  },
-  {
-    key: "durability_weight",
-    label: "Durability",
-  },
-  {
-    key: "expiry_weight",
-    label: "Expiry",
-  },
+  { key: "sales_volume_weight", label: "Sales Volume (Velocity)", color: "#3B82F6" },
+  { key: "lead_time_weight", label: "Lead Time Variability", color: "#6366F1" },
+  { key: "supplier_quality_weight", label: "Supplier Quality", color: "#10B981" },
+  { key: "popularity_weight", label: "Popularity Index", color: "#8B5CF6" },
+  { key: "weather_weight", label: "Weather Seasonality", color: "#06B6D4" },
+  { key: "festival_demand_weight", label: "Festival / Event Surge", color: "#F59E0B" },
+  { key: "durability_weight", label: "Stock Durability", color: "#EC4899" },
+  { key: "expiry_weight", label: "Expiry / Shelf Risk", color: "#EF4444" },
 ];
 
 function WeightDistributionCard({ weightage }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   if (!weightage) return null;
+
+  // Calculate sum of weights for integrity feedback
+  const sumWeights = factors.reduce(
+    (acc, factor) => acc + (Number(weightage[factor.key]) || 0),
+    0
+  );
 
   return (
     <Card
       sx={{
-        mt: 3,
-        borderRadius: 5,
-        background:
-          "linear-gradient(135deg,#111827,#1E293B)",
-        border:
-          "1px solid rgba(255,255,255,.08)",
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: "background.paper",
       }}
     >
-      <CardContent sx={{ p: 4 }}>
-        <Typography
-          variant="h5"
-          fontWeight={700}
-          mb={3}
-        >
-          AI Weight Distribution
-        </Typography>
+      <CardContent sx={{ p: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <div>
+            <Typography variant="subtitle1" fontWeight={700}>
+              8-Factor Weight Distribution Analysis
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Factor contributions calibrated to evaluate target SKU reorder priority
+            </Typography>
+          </div>
 
-        <Stack spacing={3}>
-          {factors.map((factor, index) => {
-            const value =
-              Number(weightage[factor.key]) || 0;
+          <Chip
+            icon={<CheckCircleOutlineRoundedIcon sx={{ fontSize: "14px !important" }} />}
+            label={`Sum: ${sumWeights.toFixed(2)} / 1.00`}
+            size="small"
+            color="success"
+            sx={{ fontWeight: 600, borderRadius: 1.5 }}
+          />
+        </Stack>
+
+        <Divider sx={{ mb: 2.5 }} />
+
+        <Grid container spacing={2}>
+          {factors.map((factor) => {
+            const value = Number(weightage[factor.key]) || 0;
+            const percentage = Math.round(value * 100);
 
             return (
-              <Stack
-                key={factor.key}
-                spacing={1}
-              >
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                >
-                  <Typography fontWeight={500}>
-                    {factor.label}
-                  </Typography>
-
-                  <Typography
-                    color="text.secondary"
-                  >
-                    {(value * 100).toFixed(1)}%
-                  </Typography>
-                </Stack>
-
-                <LinearProgress
-                  variant="determinate"
-                  value={value * 100}
+              <Grid key={factor.key} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box
                   sx={{
-                    height: 10,
-                    borderRadius: 10,
-                    "& .MuiLinearProgress-bar": {
-                      borderRadius: 10,
-                    },
+                    p: 1.8,
+                    borderRadius: 2,
+                    bgcolor: "background.subtle",
+                    border: `1px solid ${theme.palette.divider}`,
                   }}
-                />
+                >
+                  <Stack direction="row" justifyContent="space-between" mb={1}>
+                    <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: "70%" }}>
+                      {factor.label}
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} color={factor.color}>
+                      {percentage}%
+                    </Typography>
+                  </Stack>
 
-                {index !==
-                  factors.length - 1 && (
-                  <Divider
+                  <LinearProgress
+                    variant="determinate"
+                    value={percentage}
                     sx={{
-                      borderColor:
-                        "rgba(255,255,255,.05)",
+                      height: 6,
+                      borderRadius: 3,
+                      bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+                      "& .MuiLinearProgress-bar": {
+                        borderRadius: 3,
+                        bgcolor: factor.color,
+                      },
                     }}
                   />
-                )}
-              </Stack>
+                </Box>
+              </Grid>
             );
           })}
-        </Stack>
+        </Grid>
       </CardContent>
     </Card>
   );

@@ -12,27 +12,32 @@ import {
   Chip,
   Snackbar,
   Alert,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
+import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import PsychologyRoundedIcon from "@mui/icons-material/PsychologyRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
+import SecurityRoundedIcon from "@mui/icons-material/SecurityRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 
+import { useThemeMode } from "../context/ThemeContext";
 import api from "../services/api";
 
 function Settings() {
-  // Appearance state
-  const [darkMode, setDarkMode] = useState(true);
-  const [animations, setAnimations] = useState(true);
-  const [compactSidebar, setCompactSidebar] = useState(false);
+  const theme = useTheme();
+  const { mode, toggleTheme } = useThemeMode();
+  const isDark = theme.palette.mode === "dark";
 
-  // AI config state
-  const [autoGenerateOrders, setAutoGenerateOrders] = useState(true);
+  const [autoReorderApproval, setAutoReorderApproval] = useState(false);
+  const [procurementKey, setProcurementKey] = useState("sk-procurement-dev-key");
 
-  // Notification state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -51,233 +56,206 @@ function Settings() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "order_list.csv");
+      link.setAttribute("download", "orders_audit_export.csv");
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       showMessage("Orders exported successfully.");
     } catch {
-      showMessage("Export failed. Please try again.", "error");
+      showMessage("Export failed. Ensure backend service is reachable.", "error");
     }
   }
 
-  const lastSyncTime = new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const copyKeyToClipboard = () => {
+    navigator.clipboard.writeText(procurementKey);
+    showMessage("Procurement API key copied to clipboard.");
+  };
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {/* Header */}
-      <Stack
-        direction="row"
-        spacing={2}
-        alignItems="center"
-        mb={4}
-      >
+      <Stack direction="row" spacing={1.5} alignItems="center">
         <Box
           sx={{
-            width: 56,
-            height: 56,
-            borderRadius: 3,
+            width: 40,
+            height: 40,
+            borderRadius: 2.2,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg,#2563EB,#7C3AED)",
-            boxShadow: "0 10px 30px rgba(37,99,235,.35)",
+            bgcolor: alpha(theme.palette.primary.main, 0.12),
+            color: "primary.main",
           }}
         >
-          <SettingsRoundedIcon sx={{ color: "white", fontSize: 28 }} />
+          <SettingsRoundedIcon fontSize="small" />
         </Box>
-
         <Box>
-          <Typography variant="h4" fontWeight={800}>
-            Settings
+          <Typography variant="h5" fontWeight={700}>
+            System Preferences & Security
           </Typography>
-
-          <Typography color="text.secondary">
-            Manage application preferences, AI configuration and system behavior
+          <Typography variant="caption" color="text.secondary">
+            Manage appearance, procurement credentials, and environment parameters
           </Typography>
         </Box>
       </Stack>
 
-      <Grid container spacing={3}>
-        {/* Appearance */}
+      <Grid container spacing={2.5}>
+        {/* 1. Appearance & Theme Settings */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ borderRadius: 5, minHeight: 280 }}>
+          <Card sx={{ borderRadius: 3, height: "100%", border: `1px solid ${theme.palette.divider}` }}>
             <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-                <DarkModeRoundedIcon color="primary" />
-                <Typography variant="h6" fontWeight={700}>
-                  Appearance
-                </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
+                {mode === "dark" ? (
+                  <DarkModeRoundedIcon fontSize="small" color="primary" />
+                ) : (
+                  <LightModeRoundedIcon fontSize="small" color="primary" />
+                )}
+                <div>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Interface Appearance
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Toggle high-contrast dark mode or clean light mode
+                  </Typography>
+                </div>
               </Stack>
 
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography fontWeight={600}>Dark Mode</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Use the premium dark theme across the dashboard
-                    </Typography>
-                  </Box>
-                  <Switch
-                    checked={darkMode}
-                    onChange={(e) => {
-                      setDarkMode(e.target.checked);
-                      showMessage(
-                        e.target.checked
-                          ? "Dark mode enabled."
-                          : "Dark mode disabled."
-                      );
-                    }}
-                  />
-                </Stack>
+              <Divider sx={{ my: 2 }} />
 
-                <Divider />
-
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography fontWeight={600}>Enable Animations</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Smooth transitions and hover effects
-                    </Typography>
-                  </Box>
-                  <Switch
-                    checked={animations}
-                    onChange={(e) => setAnimations(e.target.checked)}
-                  />
-                </Stack>
-
-                <Divider />
-
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography fontWeight={600}>Compact Sidebar</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Reduce sidebar width for more workspace
-                    </Typography>
-                  </Box>
-                  <Switch
-                    checked={compactSidebar}
-                    onChange={(e) => setCompactSidebar(e.target.checked)}
-                  />
-                </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" py={1}>
+                <div>
+                  <Typography variant="body2" fontWeight={600}>
+                    Dark Mode
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {mode === "dark"
+                      ? "Currently using Obsidian dark theme"
+                      : "Currently using crisp SaaS light theme"}
+                  </Typography>
+                </div>
+                <Switch checked={mode === "dark"} onChange={toggleTheme} color="primary" />
               </Stack>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* AI Configuration */}
+        {/* 2. Security & Procurement Auth */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ borderRadius: 5, minHeight: 280 }}>
+          <Card sx={{ borderRadius: 3, height: "100%", border: `1px solid ${theme.palette.divider}` }}>
             <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-                <PsychologyRoundedIcon color="secondary" />
-                <Typography variant="h6" fontWeight={700}>
-                  AI Configuration
-                </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
+                <SecurityRoundedIcon fontSize="small" color="primary" />
+                <div>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Procurement Authorization Key
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Bearer token required to approve or reject replenishment orders
+                  </Typography>
+                </div>
               </Stack>
 
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography fontWeight={600}>AI Engine</Typography>
-                  <Chip label="Local Statistical Engine" color="success" />
-                </Stack>
+              <Divider sx={{ my: 2 }} />
 
-                <Divider />
-
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography fontWeight={600}>Reorder Threshold</Typography>
-                  <Chip label="55 / 100" color="primary" />
-                </Stack>
-
-                <Divider />
-
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography fontWeight={600}>Auto Generate Orders</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Create pending orders automatically when AI recommends a reorder
-                    </Typography>
-                  </Box>
-                  <Switch
-                    checked={autoGenerateOrders}
-                    onChange={(e) => setAutoGenerateOrders(e.target.checked)}
-                  />
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Database */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ borderRadius: 5 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-                <StorageRoundedIcon color="success" />
-                <Typography variant="h6" fontWeight={700}>
-                  Database
-                </Typography>
-              </Stack>
-
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography color="text.secondary">Connection</Typography>
-                  <Chip label="Connected" color="success" size="small" />
-                </Stack>
-
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography color="text.secondary">Database</Typography>
-                  <Typography fontWeight={600}>ai_product_reordering</Typography>
-                </Stack>
-
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography color="text.secondary">Environment</Typography>
-                  <Chip label="Development" color="warning" size="small" />
-                </Stack>
-
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography color="text.secondary">Last Sync</Typography>
-                  <Typography fontWeight={600}>{lastSyncTime}</Typography>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Export & Backup */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ borderRadius: 5 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-                <DownloadRoundedIcon color="primary" />
-                <Typography variant="h6" fontWeight={700}>
-                  Export &amp; Backup
-                </Typography>
-              </Stack>
-
-              <Typography color="text.secondary" mb={3}>
-                Export reports and create backups of your AI recommendation data.
+              <TextField
+                fullWidth
+                size="small"
+                label="Active Authorization Token"
+                value={procurementKey}
+                onChange={(e) => setProcurementKey(e.target.value)}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Button
+                          size="small"
+                          onClick={copyKeyToClipboard}
+                          startIcon={<ContentCopyRoundedIcon sx={{ fontSize: 14 }} />}
+                        >
+                          Copy
+                        </Button>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                Passed in <Typography component="span" variant="caption" sx={{ fontFamily: "monospace", color: "primary.main" }}>Authorization: Bearer &lt;token&gt;</Typography> header during approvals.
               </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<DownloadRoundedIcon />}
-                  onClick={handleExportCSV}
-                >
-                  Export CSV
-                </Button>
+        {/* 3. System Architecture Diagnostics */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ borderRadius: 3, height: "100%", border: `1px solid ${theme.palette.divider}` }}>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
+                <StorageRoundedIcon fontSize="small" color="primary" />
+                <div>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Environment Diagnostics
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Live system integration parameters
+                  </Typography>
+                </div>
+              </Stack>
 
+              <Divider sx={{ my: 2 }} />
+
+              <Stack spacing={1.5}>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="caption" color="text.secondary">FastAPI Service URL</Typography>
+                  <Typography variant="caption" fontWeight={600} sx={{ fontFamily: "monospace" }}>http://127.0.0.1:8000</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="caption" color="text.secondary">Database Target</Typography>
+                  <Typography variant="caption" fontWeight={600} sx={{ fontFamily: "monospace" }}>ai_product_reordering (MySQL)</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="caption" color="text.secondary">AI Engine Mode</Typography>
+                  <Chip label="Local Statistical (Zero API Dependency)" size="small" color="success" sx={{ height: 20, fontSize: "0.68rem" }} />
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="caption" color="text.secondary">Platform Build</Typography>
+                  <Typography variant="caption" fontWeight={600}>Phase E Production Ready</Typography>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 4. Data Maintenance & Exports */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ borderRadius: 3, height: "100%", border: `1px solid ${theme.palette.divider}` }}>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" mb={1.5}>
+                <PsychologyRoundedIcon fontSize="small" color="primary" />
+                <div>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Data Maintenance & Audit
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Export order archives and audit records
+                  </Typography>
+                </div>
+              </Stack>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Stack spacing={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Export complete order and approval transition records formatted for executive audit and spreadsheet analysis.
+                </Typography>
                 <Button
                   variant="outlined"
-                  disabled
-                  title="Coming soon"
+                  startIcon={<DownloadRoundedIcon />}
+                  onClick={handleExportCSV}
+                  sx={{ width: "fit-content" }}
                 >
-                  Backup Data
+                  Download Order Audit CSV
                 </Button>
               </Stack>
             </CardContent>
@@ -285,51 +263,13 @@ function Settings() {
         </Grid>
       </Grid>
 
-      {/* About */}
-      <Card sx={{ mt: 3, borderRadius: 5 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-            <InfoRoundedIcon color="action" />
-            <Typography variant="h6" fontWeight={700}>
-              About SKUDynamic AI
-            </Typography>
-          </Stack>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography color="text.secondary">Version</Typography>
-              <Typography fontWeight={600}>v1.0.0</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography color="text.secondary">AI Engine</Typography>
-              <Typography fontWeight={600}>Local Statistical Engine v1</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography color="text.secondary">Frontend</Typography>
-              <Typography fontWeight={600}>React + MUI</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Typography color="text.secondary">Backend</Typography>
-              <Typography fontWeight={600}>FastAPI + MySQL</Typography>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
+      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        >
+        <Alert severity={snackbar.severity} sx={{ borderRadius: 2 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

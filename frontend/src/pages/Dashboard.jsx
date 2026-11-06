@@ -3,6 +3,7 @@ import {
   CircularProgress,
   Alert,
   Box,
+  Typography,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import InventoryCategoryChart from "../components/charts/InventoryCategoryChart";
@@ -54,34 +55,13 @@ function Dashboard() {
           getWeightConfigs(),
         ]);
 
-        if (results[0].status === "fulfilled") {
-          setProducts(results[0].value);
-        }
-
-        if (results[1].status === "fulfilled") {
-          setSuppliers(results[1].value);
-        }
-
-        if (results[2].status === "fulfilled") {
-          setInventories(results[2].value);
-        }
-
-        if (results[3].status === "fulfilled") {
-          setAnalytics(results[3].value);
-        }
-
-        if (results[4].status === "fulfilled") {
-          setOrders(results[4].value);
-        }
-
-        if (results[5].status === "fulfilled") {
-          setRetailers(results[5].value);
-        }
-
-        if (results[6].status === "fulfilled") {
-          setWeightConfigs(results[6].value);
-        }
-
+        if (results[0].status === "fulfilled") setProducts(results[0].value || []);
+        if (results[1].status === "fulfilled") setSuppliers(results[1].value || []);
+        if (results[2].status === "fulfilled") setInventories(results[2].value || []);
+        if (results[3].status === "fulfilled") setAnalytics(results[3].value || {});
+        if (results[4].status === "fulfilled") setOrders(results[4].value || []);
+        if (results[5].status === "fulfilled") setRetailers(results[5].value || []);
+        if (results[6].status === "fulfilled") setWeightConfigs(results[6].value || []);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -96,97 +76,119 @@ function Dashboard() {
     return (
       <Box
         sx={{
-          height: "70vh",
+          minHeight: "60vh",
           display: "flex",
-          justifyContent: "center",
+          flexDirection: "column",
           alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
         }}
       >
-        <CircularProgress />
+        <CircularProgress size={36} color="primary" />
+        <Typography variant="body2" color="text.secondary">
+          Connecting to inventory service...
+        </Typography>
       </Box>
     );
   }
-  return (
-    <>
-      {error && <Alert severity="error">{error}</Alert>}
 
+  // Calculate total stock on hand across inventory records
+  const totalStockOnHand = inventories.reduce(
+    (acc, curr) => acc + (Number(curr.current_stock) || 0),
+    0
+  );
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {error && (
+        <Alert severity="error" onClose={() => setError("")} sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Hero Welcome Banner */}
       <WelcomeBanner />
 
-      {/* KPI Cards */}
-      <Grid container spacing={3} mt={1}>
+      {/* KPI Cards Grid */}
+      <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Products"
+            title="Managed SKUs"
             value={products.length}
             icon={<Inventory2RoundedIcon />}
             color="#3B82F6"
+            subtitle={`${products.length} active catalog items`}
+            badgeText="Catalog Live"
+            badgeColor="primary"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Inventory"
-            value={inventories.length}
+            title="Total Stock On-Hand"
+            value={totalStockOnHand.toLocaleString()}
             icon={<WarehouseRoundedIcon />}
             color="#10B981"
+            subtitle={`${inventories.length} inventory tracks`}
+            badgeText="Stock Tracked"
+            badgeColor="success"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Suppliers"
+            title="Active Suppliers"
             value={suppliers.length}
             icon={<LocalShippingRoundedIcon />}
             color="#8B5CF6"
+            subtitle="Verified sourcing vendors"
+            badgeText="Sourcing Active"
+            badgeColor="secondary"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Orders"
-            value={analytics?.total_orders ?? 0}
+            title="Procurement Orders"
+            value={orders.length}
             icon={<ReceiptLongRoundedIcon />}
             color="#F59E0B"
-          />
-        </Grid>
-      </Grid>
-      {/* AI Quick Actions */}
-      <AIQuickActions />
-
-      {/* Charts */}
-      <Grid container spacing={3} mt={4}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <InventoryCategoryChart
-            products={products}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <OrderSummaryChart
-            analytics={analytics}
+            subtitle={`${analytics.pending_orders ?? 0} awaiting review`}
+            badgeText={analytics.pending_orders ? `${analytics.pending_orders} Pending` : "Up to date"}
+            badgeColor={analytics.pending_orders ? "warning" : "default"}
           />
         </Grid>
       </Grid>
 
-      {/* Bottom Widgets */}
-      <Grid container spacing={3} mt={2}>
-        <Grid size={{ xs: 12, lg: 7 }}>
+      {/* Inventory Alerts & Recent Orders */}
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <LowStockCard inventories={inventories} products={products} />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <RecentOrders
-            loading={loading}
+            loading={false}
             orders={orders}
             products={products}
             suppliers={suppliers}
           />
         </Grid>
+      </Grid>
 
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <LowStockCard
-            inventories={inventories}
-            products={products}
-          />
+      {/* Analytics Visualizations */}
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <OrderSummaryChart analytics={analytics} />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <InventoryCategoryChart products={products} />
         </Grid>
       </Grid>
-    </>
+
+      {/* AI Quick Actions Module */}
+      <AIQuickActions />
+    </Box>
   );
 }
+
 export default Dashboard;

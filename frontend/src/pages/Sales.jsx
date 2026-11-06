@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-
 import {
   Box,
   Button,
   Alert,
   Snackbar,
   Chip,
+  Stack,
+  Typography,
 } from "@mui/material";
-
 import MuiAlert from "@mui/material/Alert";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
@@ -36,26 +36,16 @@ import SalesViewDialog from "../components/sales/SalesViewDialog";
 
 function Sales() {
   const [sales, setSales] = useState([]);
-  const [filteredSales, setFilteredSales] =
-    useState([]);
-
+  const [filteredSales, setFilteredSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [retailers, setRetailers] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [openDialog, setOpenDialog] =
-    useState(false);
-
-  const [viewDialog, setViewDialog] =
-    useState(false);
-
-  const [deleteDialog, setDeleteDialog] =
-    useState(false);
-
-  const [selectedSale, setSelectedSale] =
-    useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -70,34 +60,39 @@ function Sales() {
   async function loadSales() {
     try {
       setLoading(true);
-
-      const [
-        salesData,
-        productData,
-        retailerData,
-      ] = await Promise.all([
+      const [salesData, productData, retailerData] = await Promise.all([
         getSales(),
         getProducts(),
         getRetailers(),
       ]);
 
-      setSales(salesData);
-      setFilteredSales(salesData);
+      setProducts(productData || []);
+      setRetailers(retailerData || []);
 
-      setProducts(productData);
-      setRetailers(retailerData);
+      const productMap = Object.fromEntries(
+        (productData || []).map((p) => [p.product_id, p.product_name])
+      );
+      const retailerMap = Object.fromEntries(
+        (retailerData || []).map((r) => [r.retailer_id, r.retailer_name])
+      );
+
+      const enriched = (salesData || []).map((s) => ({
+        ...s,
+        product_name: productMap[s.product_id] ?? `Product #${s.product_id}`,
+        retailer_name: retailerMap[s.retailer_id] ?? `Retailer #${s.retailer_id}`,
+      }));
+
+      setSales(enriched);
+      setFilteredSales(enriched);
     } catch (err) {
       console.error(err);
-      setError("Failed to load sales.");
+      setError("Failed to load sales transaction logs.");
     } finally {
       setLoading(false);
     }
   }
 
-  const showMessage = (
-    message,
-    severity = "success"
-  ) => {
+  const showMessage = (message, severity = "success") => {
     setSnackbar({
       open: true,
       message,
@@ -105,50 +100,29 @@ function Sales() {
     });
   };
 
-  const getProductName = (id) =>
-    products.find(
-      (p) => p.product_id === id
-    )?.product_name || id;
-
-  const getRetailerName = (id) =>
-    retailers.find(
-      (r) => r.retailer_id === id
-    )?.retailer_name || id;
-
   const handleSearch = (value) => {
     const search = value.toLowerCase();
-
     setFilteredSales(
       sales.filter(
-        (sale) =>
-          getProductName(sale.product_id)
-            .toLowerCase()
-            .includes(search) ||
-          getRetailerName(
-            sale.retailer_id
-          )
-            .toLowerCase()
-            .includes(search) ||
-          sale.sales_channel
-            ?.toLowerCase()
-            .includes(search)
+        (s) =>
+          s.product_name?.toLowerCase().includes(search) ||
+          s.retailer_name?.toLowerCase().includes(search) ||
+          s.sales_channel?.toLowerCase().includes(search)
       )
     );
   };
 
   async function handleView(row) {
     try {
-      const sale = await getSale(
-        row.sale_id
-      );
-
-      setSelectedSale(sale);
+      const sale = await getSale(row.sale_id);
+      setSelectedSale({
+        ...sale,
+        product_name: row.product_name,
+        retailer_name: row.retailer_name,
+      });
       setViewDialog(true);
     } catch {
-      showMessage(
-        "Unable to fetch sale.",
-        "error"
-      );
+      showMessage("Unable to fetch sale record.", "error");
     }
   }
 
@@ -162,59 +136,30 @@ function Sales() {
     setDeleteDialog(true);
   }
 
-  async function handleSave(form) {
+  async function handleSave(data) {
     try {
       if (selectedSale) {
-        await updateSale(
-          selectedSale.sale_id,
-          form
-        );
-
-        showMessage(
-          "Sale updated successfully."
-        );
+        await updateSale(selectedSale.sale_id, data);
+        showMessage("Sale record updated successfully.");
       } else {
-        await createSale(form);
-
-        showMessage(
-          "Sale created successfully."
-        );
+        await createSale(data);
+        showMessage("Sale recorded successfully.");
       }
-
       setOpenDialog(false);
-      setSelectedSale(null);
-
       loadSales();
-    } catch (err) {
-      console.error(err);
-
-      showMessage(
-        "Operation failed.",
-        "error"
-      );
+    } catch {
+      showMessage("Failed to save sale.", "error");
     }
   }
 
   async function confirmDelete() {
     try {
-      await deleteSale(
-        selectedSale.sale_id
-      );
-
-      showMessage(
-        "Sale deleted successfully."
-      );
-
+      await deleteSale(selectedSale.sale_id);
+      showMessage("Sale record deleted.");
       setDeleteDialog(false);
-
       loadSales();
-    } catch (err) {
-      console.error(err);
-
-      showMessage(
-        "Delete failed.",
-        "error"
-      );
+    } catch {
+      showMessage("Delete failed.", "error");
     }
   }
 
@@ -222,68 +167,62 @@ function Sales() {
     {
       field: "sale_id",
       headerName: "ID",
-      width: 80,
+      width: 70,
     },
     {
-      field: "product_id",
-      headerName: "Product",
-      flex: 1,
-      valueGetter: (_, row) =>
-        getProductName(row.product_id),
+      field: "product_name",
+      headerName: "Product SKU",
+      flex: 1.2,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={600}>
+          {params.value}
+        </Typography>
+      ),
     },
     {
-      field: "retailer_id",
+      field: "retailer_name",
       headerName: "Retailer",
       flex: 1,
-      valueGetter: (_, row) =>
-        getRetailerName(
-          row.retailer_id
-        ),
     },
     {
       field: "sale_date",
       headerName: "Date",
-      width: 140,
-      valueGetter: (_, row) =>
-        new Date(
-          row.sale_date
-        ).toLocaleDateString(),
-    },
-        {
-      field: "quantity_sold",
-      headerName: "Quantity",
       width: 120,
+      valueFormatter: (value) => (value ? new Date(value).toLocaleDateString() : "—"),
+    },
+    {
+      field: "quantity_sold",
+      headerName: "Qty Sold",
+      width: 110,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={600}>
+          {params.value} units
+        </Typography>
+      ),
     },
     {
       field: "revenue",
-      headerName: "Revenue",
-      width: 140,
-      valueGetter: (_, row) =>
-        `₹${Number(row.revenue).toLocaleString()}`,
+      headerName: "Gross Revenue",
+      width: 130,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={700} color="primary.main">
+          ${Number(params.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </Typography>
+      ),
     },
     {
       field: "popularity_score",
-      headerName: "Popularity",
+      headerName: "Popularity Index",
       width: 150,
       renderCell: (params) => {
-        const score = Number(params.value);
-
-        let color = "error";
-        let label = `Low (${score})`;
-
-        if (score >= 8) {
-          color = "success";
-          label = `High (${score})`;
-        } else if (score >= 5) {
-          color = "warning";
-          label = `Medium (${score})`;
-        }
-
+        const score = Number(params.value || 0);
+        const color = score >= 8 ? "success" : score >= 5 ? "warning" : "default";
         return (
           <Chip
-            label={label}
+            label={`${score} / 10`}
             color={color}
             size="small"
+            sx={{ fontWeight: 600, borderRadius: 1.5, height: 22 }}
           />
         );
       },
@@ -292,6 +231,14 @@ function Sales() {
       field: "sales_channel",
       headerName: "Channel",
       flex: 1,
+      renderCell: (params) => (
+        <Chip
+          label={params.value || "In-Store"}
+          size="small"
+          variant="outlined"
+          sx={{ fontSize: "0.72rem", height: 22 }}
+        />
+      ),
     },
   ];
 
@@ -300,11 +247,11 @@ function Sales() {
   }
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
-        title="Sales"
-        subtitle="Manage product sales records."
-        icon={<PointOfSaleRoundedIcon />}
+        title="Sales Velocity & Transaction History"
+        subtitle="Log of historical product transactions powering the 90-day daily sales observation engine"
+        icon={<PointOfSaleRoundedIcon color="primary" />}
         action={
           <Button
             variant="contained"
@@ -314,42 +261,51 @@ function Sales() {
               setOpenDialog(true);
             }}
           >
-            Add Sale
+            Record Sale
           </Button>
         }
       />
 
-      {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          mb={2}
         >
-          {error}
-        </Alert>
-      )}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Transaction Ledger
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {filteredSales.length} historical transactions recorded
+            </Typography>
+          </Box>
+          <SearchBar placeholder="Search product, retailer, or channel..." onSearch={handleSearch} />
+        </Stack>
 
-      <SearchBar
-        placeholder="Search sales..."
-        onSearch={handleSearch}
-      />
+        {filteredSales.length === 0 ? (
+          <EmptyState
+            title="No Sales Records Found"
+            subtitle="No sales transactions matching your search query."
+          />
+        ) : (
+          <EntityTable
+            rows={filteredSales}
+            columns={columns}
+            loading={loading}
+            getRowId={(row) => row.sale_id}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        )}
+      </Box>
 
-      {filteredSales.length === 0 ? (
-        <EmptyState
-          title="No Sales"
-          subtitle="No sales records found."
-        />
-      ) : (
-        <EntityTable
-          rows={filteredSales}
-          columns={columns}
-          loading={loading}
-          getRowId={(row) => row.sale_id}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
-
+      {/* Dialogs */}
       <SalesDialog
         open={openDialog}
         onClose={() => {
@@ -364,39 +320,24 @@ function Sales() {
 
       <SalesViewDialog
         open={viewDialog}
-        onClose={() =>
-          setViewDialog(false)
-        }
+        onClose={() => setViewDialog(false)}
         sale={selectedSale}
-        products={products}
-        retailers={retailers}
       />
 
       <ConfirmDialog
         open={deleteDialog}
-        title="Delete Sale"
-        message={`Delete Sale #${selectedSale?.sale_id}?`}
-        onClose={() =>
-          setDeleteDialog(false)
-        }
+        title="Delete Sale Record"
+        message={`Delete transaction #${selectedSale?.sale_id}? This affects average daily sales calculation.`}
+        onClose={() => setDeleteDialog(false)}
         onConfirm={confirmDelete}
       />
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() =>
-          setSnackbar({
-            ...snackbar,
-            open: false,
-          })
-        }
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <MuiAlert
-          elevation={6}
-          variant="filled"
-          severity={snackbar.severity}
-        >
+        <MuiAlert elevation={6} variant="filled" severity={snackbar.severity}>
           {snackbar.message}
         </MuiAlert>
       </Snackbar>

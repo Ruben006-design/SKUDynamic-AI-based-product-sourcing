@@ -6,150 +6,160 @@ import {
   Stack,
   Chip,
   Divider,
+  Box,
 } from "@mui/material";
-
+import { alpha, useTheme } from "@mui/material/styles";
 import PsychologyRoundedIcon from "@mui/icons-material/PsychologyRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
-import LayersRoundedIcon from "@mui/icons-material/LayersRounded";
-import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
-
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import { useNavigate } from "react-router-dom";
 
 function AIQuickActions() {
+  const theme = useTheme();
   const navigate = useNavigate();
+  const isDark = theme.palette.mode === "dark";
 
   return (
     <Card
       sx={{
-        mt: 3,
-        borderRadius: 5,
-        border: "1px solid",
-        borderColor: "divider",
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: "background.paper",
       }}
     >
-      <CardContent sx={{ p: 4 }}>
+      <CardContent sx={{ p: 3 }}>
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          mb={3}
+          mb={2}
+          flexWrap="wrap"
+          gap={1.5}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
-            <PsychologyRoundedIcon
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Box
               sx={{
-                fontSize: 42,
-                color: "primary.main",
+                width: 38,
+                height: 38,
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: alpha(theme.palette.secondary.main, 0.12),
+                color: "secondary.main",
               }}
-            />
-
+            >
+              <PsychologyRoundedIcon fontSize="small" />
+            </Box>
             <div>
-              <Typography variant="h5" fontWeight={700}>
-                AI Quick Actions
+              <Typography variant="subtitle1" fontWeight={700}>
+                AI Intelligence Actions
               </Typography>
-
-              <Typography color="text.secondary">
-                Launch AI features directly from the dashboard.
+              <Typography variant="caption" color="text.secondary">
+                Launch automated reorder pipelines and weight analyses
               </Typography>
             </div>
           </Stack>
 
           <Chip
-            label="Gemini AI Connected"
+            label="Offline Engine Ready"
             color="success"
+            size="small"
+            sx={{
+              height: 22,
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              borderRadius: 1.5,
+            }}
           />
         </Stack>
 
-        <Divider sx={{ mb: 3 }} />
+        <Divider sx={{ mb: 2.5 }} />
 
-        <Stack spacing={3}>
+        <Stack spacing={2}>
+          {/* Action 1 */}
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1.5}
           >
             <div>
-              <Typography fontWeight={600}>
-                Generate Recommendation
+              <Typography variant="body2" fontWeight={600}>
+                Generate AI Reordering Recommendation
               </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Create an AI recommendation for one product.
+              <Typography variant="caption" color="text.secondary">
+                Calculate inventory position, target stock, and supplier selection for target SKU.
               </Typography>
             </div>
 
             <Button
               variant="contained"
-              startIcon={<AutoAwesomeRoundedIcon />}
-              onClick={() =>
-                navigate("/ai-recommendations")
-              }
+              size="small"
+              startIcon={<AutoAwesomeRoundedIcon sx={{ fontSize: "16px !important" }} />}
+              onClick={() => navigate("/ai-recommendations")}
+              sx={{ minWidth: 140, py: 0.8 }}
             >
-              Generate
+              Launch Engine
             </Button>
           </Stack>
 
           <Divider />
 
+          {/* Action 2 */}
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1.5}
           >
             <div>
-              <Typography fontWeight={600}>
-                Generate Batch
+              <Typography variant="body2" fontWeight={600}>
+                Analyze 8-Factor Weight Distribution
               </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Generate recommendations for all products.
+              <Typography variant="caption" color="text.secondary">
+                Inspect local statistical weights across sales velocity, lead time, and popularity.
               </Typography>
             </div>
 
             <Button
               variant="outlined"
-              startIcon={<LayersRoundedIcon />}
-              onClick={() =>
-                navigate("/ai-recommendations")
-              }
+              size="small"
+              startIcon={<TuneRoundedIcon sx={{ fontSize: "16px !important" }} />}
+              onClick={() => navigate("/weightages")}
+              sx={{ minWidth: 140, py: 0.8 }}
             >
-              Batch
+              View Weights
             </Button>
           </Stack>
 
           <Divider />
 
+          {/* Action 3 */}
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1.5}
           >
             <div>
-              <Typography fontWeight={600}>
-                AI Workspace
+              <Typography variant="body2" fontWeight={600}>
+                Audit Procurement Reports
               </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Open the complete recommendation workspace.
+              <Typography variant="caption" color="text.secondary">
+                Export order logs, evaluate approval rates, and review supply distribution.
               </Typography>
             </div>
 
             <Button
-              color="secondary"
-              startIcon={<OpenInNewRoundedIcon />}
-              onClick={() =>
-                navigate("/ai-recommendations")
-              }
+              variant="outlined"
+              size="small"
+              startIcon={<AssessmentRoundedIcon sx={{ fontSize: "16px !important" }} />}
+              onClick={() => navigate("/reports")}
+              sx={{ minWidth: 140, py: 0.8 }}
             >
-              Open
+              Reports
             </Button>
           </Stack>
         </Stack>

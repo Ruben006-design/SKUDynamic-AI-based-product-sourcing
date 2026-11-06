@@ -6,45 +6,27 @@ import {
   Stack,
   Box,
   Chip,
-  Avatar,
   Skeleton,
   Button,
   Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { useNavigate } from "react-router-dom";
 
-import ShoppingBagRoundedIcon from "@mui/icons-material/ShoppingBagRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
-
-function statusColor(status) {
-  switch ((status || "").toLowerCase()) {
-    case "approved":
-      return "success";
-    case "pending":
-      return "warning";
-    case "rejected":
-      return "error";
-    default:
-      return "default";
-  }
-}
+import OrderStatusChip from "../order/OrderStatusChip";
 
 function relativeTime(dateString) {
-  if (!dateString) return "Unknown";
+  if (!dateString) return "Recent";
 
   const now = new Date();
   const date = new Date(dateString);
-
   const diff = Math.floor((now - date) / 1000);
 
   if (diff < 60) return "Just now";
-
-  if (diff < 3600)
-    return `${Math.floor(diff / 60)} mins ago`;
-
-  if (diff < 86400)
-    return `${Math.floor(diff / 3600)} hrs ago`;
-
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return date.toLocaleDateString();
 }
 
@@ -54,49 +36,38 @@ function RecentOrders({
   products = [],
   suppliers = [],
 }) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+
   const productMap = useMemo(() => {
     const map = {};
-
     products.forEach((p) => {
       map[p.product_id] = p.product_name;
     });
-
     return map;
   }, [products]);
 
   const supplierMap = useMemo(() => {
     const map = {};
-
     suppliers.forEach((s) => {
       map[s.supplier_id] = s.supplier_name;
     });
-
     return map;
   }, [suppliers]);
 
+  const displayedOrders = useMemo(() => {
+    return orders.slice(0, 5);
+  }, [orders]);
+
   if (loading) {
     return (
-      <Card
-        sx={{
-          borderRadius: 5,
-          height: "100%",
-        }}
-      >
-        <CardContent>
-          <Skeleton
-            variant="text"
-            width={180}
-            height={35}
-          />
-
-          {[1, 2, 3].map((item) => (
-            <Box
-              key={item}
-              mt={3}
-            >
-              <Skeleton height={30} />
-              <Skeleton width="70%" />
-              <Skeleton width="50%" />
+      <Card sx={{ borderRadius: 3, height: "100%" }}>
+        <CardContent sx={{ p: 3 }}>
+          <Skeleton variant="text" width={160} height={28} />
+          {[1, 2, 3, 4].map((item) => (
+            <Box key={item} mt={2}>
+              <Skeleton height={20} />
+              <Skeleton width="60%" height={16} />
             </Box>
           ))}
         </CardContent>
@@ -105,171 +76,89 @@ function RecentOrders({
   }
 
   return (
-    <Card
-      sx={{
-        borderRadius: 5,
-        height: "100%",
-        overflow: "hidden",
-        border: "1px solid",
-        borderColor: "divider",
-        transition: ".3s",
-
-        "&:hover": {
-          boxShadow: "0 20px 45px rgba(0,0,0,.12)",
-        },
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-        >
-          <Typography
-            variant="h6"
-            fontWeight={800}
-          >
-            Recent Orders
-          </Typography>
-
+    <Card sx={{ borderRadius: 3, height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardContent sx={{ p: 2.5, flexGrow: 1 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Recent Orders
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Latest procurement activity
+            </Typography>
+          </Box>
           <Button
-            endIcon={<ArrowForwardRoundedIcon />}
             size="small"
+            endIcon={<ArrowForwardRoundedIcon sx={{ fontSize: "14px !important" }} />}
+            onClick={() => navigate("/orders")}
+            sx={{ fontSize: "0.78rem", py: 0.5, px: 1 }}
           >
-            View All
+            All Orders
           </Button>
         </Stack>
 
-        {orders.length === 0 ? (
-          <Stack
-            alignItems="center"
-            spacing={2}
-            py={5}
-          >
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: 60,
-                height: 60,
-              }}
-            >
-              <Inventory2RoundedIcon />
-            </Avatar>
+        <Divider sx={{ mb: 2 }} />
 
-            <Typography
-              variant="body1"
-              fontWeight={600}
-            >
-              No Orders Available
+        {displayedOrders.length === 0 ? (
+          <Box py={4} textAlign="center">
+            <Typography variant="body2" color="text.secondary">
+              No recent orders found.
             </Typography>
-
-            <Typography
-              color="text.secondary"
-              textAlign="center"
-            >
-              AI recommendations will appear here after
-              generating reorder suggestions.
-            </Typography>
-          </Stack>
+          </Box>
         ) : (
-          <Stack spacing={2}>
-            {orders.slice(0, 5).map((order, index) => (
-              <Box key={order.order_list_id}>
+          <Stack spacing={1.8}>
+            {displayedOrders.map((order) => {
+              const productName = productMap[order.product_id] || `Product #${order.product_id}`;
+              const supplierName = supplierMap[order.supplier_id] || `Supplier #${order.supplier_id}`;
+
+              return (
                 <Stack
+                  key={order.order_id}
                   direction="row"
                   justifyContent="space-between"
                   alignItems="center"
-                  sx={{
-                    p: 2,
-                    borderRadius: 4,
-                    transition: ".25s",
-
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                      transform: "translateY(-2px)",
-                    },
-                  }}
+                  spacing={1}
                 >
-                  <Stack
-                    direction="row"
-                    spacing={2}
-                    alignItems="center"
-                  >
-                    <Avatar
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Box
                       sx={{
-                        bgcolor: "primary.main",
-                        width: 48,
-                        height: 48,
+                        width: 34,
+                        height: 34,
+                        borderRadius: 1.5,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "background.subtle",
+                        color: "text.secondary",
+                        flexShrink: 0,
                       }}
                     >
-                      <ShoppingBagRoundedIcon />
-                    </Avatar>
-
-                    <Box>
-                      <Typography
-                        fontWeight={700}
-                      >
-                        {productMap[
-                          order.product_id
-                        ] || "Unknown Product"}
-                      </Typography>
-
+                      <Inventory2RoundedIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
                       <Typography
                         variant="body2"
-                        color="text.secondary"
+                        fontWeight={600}
+                        noWrap
+                        sx={{ fontSize: "0.85rem", color: "text.primary" }}
                       >
-                        {supplierMap[
-                          order.preferred_supplier_id
-                        ] || "Unknown Supplier"}
+                        {productName}
                       </Typography>
-
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        Qty:{" "}
-                        {order.recommended_order_qty} Units
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", fontSize: "0.72rem" }}>
+                        {supplierName} • {order.order_quantity} units
                       </Typography>
                     </Box>
                   </Stack>
 
-                  <Stack
-                    spacing={1}
-                    alignItems="flex-end"
-                  >
-                    <Chip
-                      size="small"
-                      color={statusColor(
-                        order.status
-                      )}
-                      label={order.status}
-                    />
-
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={`AI ${Number(
-                        order.final_score
-                      ).toFixed(1)}%`}
-                    />
-
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                    >
-                      {relativeTime(
-                        order.generated_at
-                      )}
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexShrink={0}>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: "0.72rem" }}>
+                      {relativeTime(order.created_at)}
                     </Typography>
+                    <OrderStatusChip status={order.order_status} />
                   </Stack>
                 </Stack>
-
-                {index !== orders.length - 1 && (
-                  <Divider />
-                )}
-              </Box>
-            ))}
+              );
+            })}
           </Stack>
         )}
       </CardContent>

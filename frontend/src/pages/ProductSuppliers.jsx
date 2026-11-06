@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-
 import {
   Box,
   Button,
   Alert,
   Snackbar,
+  Chip,
+  Stack,
+  Typography,
 } from "@mui/material";
-
 import MuiAlert from "@mui/material/Alert";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import HandshakeRoundedIcon from "@mui/icons-material/HandshakeRounded";
+import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 
 import {
   getProductSuppliers,
@@ -19,7 +20,6 @@ import {
   updateProductSupplier,
   deleteProductSupplier,
 } from "../services/productSupplierService";
-
 import { getProducts } from "../services/productService";
 import { getSuppliers } from "../services/supplierService";
 
@@ -34,47 +34,23 @@ import ProductSupplierDialog from "../components/productSupplier/ProductSupplier
 import ProductSupplierViewDialog from "../components/productSupplier/ProductSupplierViewDialog";
 
 function ProductSuppliers() {
+  const [productSuppliers, setProductSuppliers] = useState([]);
+  const [filteredProductSuppliers, setFilteredProductSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
 
-  const [productSuppliers, setProductSuppliers] =
-    useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedProductSupplier, setSelectedProductSupplier] = useState(null);
 
-  const [
-    filteredProductSuppliers,
-    setFilteredProductSuppliers,
-  ] = useState([]);
-
-  const [products, setProducts] =
-    useState([]);
-
-  const [suppliers, setSuppliers] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [openDialog, setOpenDialog] =
-    useState(false);
-
-  const [viewDialog, setViewDialog] =
-    useState(false);
-
-  const [deleteDialog, setDeleteDialog] =
-    useState(false);
-
-  const [
-    selectedProductSupplier,
-    setSelectedProductSupplier,
-  ] = useState(null);
-
-  const [snackbar, setSnackbar] =
-    useState({
-      open: false,
-      message: "",
-      severity: "success",
-    });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   useEffect(() => {
     loadProductSuppliers();
@@ -82,241 +58,159 @@ function ProductSuppliers() {
 
   async function loadProductSuppliers() {
     try {
-
       setLoading(true);
-
-      const [
-        productSupplierData,
-        productData,
-        supplierData,
-      ] = await Promise.all([
+      const [psData, productData, supplierData] = await Promise.all([
         getProductSuppliers(),
         getProducts(),
         getSuppliers(),
       ]);
 
-      setProductSuppliers(productSupplierData);
-      setFilteredProductSuppliers(productSupplierData);
+      setProducts(productData || []);
+      setSuppliers(supplierData || []);
 
-      setProducts(productData);
-      setSuppliers(supplierData);
-
-    } catch (err) {
-
-      console.error(err);
-
-      setError(
-        "Failed to load Product Suppliers."
+      const productMap = Object.fromEntries(
+        (productData || []).map((p) => [p.product_id, p.product_name])
+      );
+      const supplierMap = Object.fromEntries(
+        (supplierData || []).map((s) => [s.supplier_id, s.supplier_name])
       );
 
+      const enriched = (psData || []).map((ps) => ({
+        ...ps,
+        product_name: productMap[ps.product_id] ?? `Product #${ps.product_id}`,
+        supplier_name: supplierMap[ps.supplier_id] ?? `Supplier #${ps.supplier_id}`,
+      }));
+
+      setProductSuppliers(enriched);
+      setFilteredProductSuppliers(enriched);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load product supplier mappings.");
     } finally {
-
       setLoading(false);
-
     }
   }
 
-  const showMessage = (
-    message,
-    severity = "success"
-  ) => {
-
+  const showMessage = (message, severity = "success") => {
     setSnackbar({
       open: true,
       message,
       severity,
     });
-
   };
 
   const handleSearch = (value) => {
-
-    const search =
-      value.toLowerCase();
-
+    const search = value.toLowerCase();
     setFilteredProductSuppliers(
-      productSuppliers.filter((ps) => {
-
-        const product =
-          products.find(
-            (p) =>
-              p.product_id ===
-              ps.product_id
-          );
-
-        const supplier =
-          suppliers.find(
-            (s) =>
-              s.supplier_id ===
-              ps.supplier_id
-          );
-
-        return (
-          product?.product_name
-            ?.toLowerCase()
-            .includes(search) ||
-
-          supplier?.supplier_name
-            ?.toLowerCase()
-            .includes(search)
-        );
-
-      })
+      productSuppliers.filter(
+        (ps) =>
+          ps.product_name?.toLowerCase().includes(search) ||
+          ps.supplier_name?.toLowerCase().includes(search)
+      )
     );
   };
 
   async function handleView(row) {
-
     try {
-
-      const data =
-        await getProductSupplier(
-          row.product_supplier_id
-        );
-
-      setSelectedProductSupplier(data);
-
+      const ps = await getProductSupplier(row.product_supplier_id);
+      setSelectedProductSupplier({
+        ...ps,
+        product_name: row.product_name,
+        supplier_name: row.supplier_name,
+      });
       setViewDialog(true);
-
     } catch {
-
-      showMessage(
-        "Unable to fetch details.",
-        "error"
-      );
-
+      showMessage("Unable to fetch mapping details.", "error");
     }
-
   }
 
   function handleEdit(row) {
-
     setSelectedProductSupplier(row);
-
     setOpenDialog(true);
-
   }
 
   function handleDelete(row) {
-
     setSelectedProductSupplier(row);
-
     setDeleteDialog(true);
-
   }
 
   async function handleSave(form) {
-
     try {
-
       if (selectedProductSupplier) {
-
-        await updateProductSupplier(
-          selectedProductSupplier.product_supplier_id,
-          form
-        );
-
-        showMessage(
-          "Product Supplier updated successfully."
-        );
-
+        await updateProductSupplier(selectedProductSupplier.product_supplier_id, form);
+        showMessage("Mapping updated successfully.");
       } else {
-
         await createProductSupplier(form);
-
-        showMessage(
-          "Product Supplier created successfully."
-        );
-
+        showMessage("Mapping created successfully.");
       }
-
       setOpenDialog(false);
-
       setSelectedProductSupplier(null);
-
       loadProductSuppliers();
-
-    } catch (err) {
-
-      console.error(err);
-
-      showMessage(
-        "Operation failed.",
-        "error"
-      );
-
+    } catch {
+      showMessage("Operation failed.", "error");
     }
-
   }
 
   async function confirmDelete() {
-
     try {
-
-      await deleteProductSupplier(
-        selectedProductSupplier.product_supplier_id
-      );
-
-      showMessage(
-        "Product Supplier deleted successfully."
-      );
-
+      await deleteProductSupplier(selectedProductSupplier.product_supplier_id);
+      showMessage("Mapping removed.");
       setDeleteDialog(false);
-
       loadProductSuppliers();
-
     } catch {
-
-      showMessage(
-        "Delete failed.",
-        "error"
-      );
-
+      showMessage("Delete failed.", "error");
     }
-
   }
-    const columns = [
+
+  const columns = [
     {
       field: "product_supplier_id",
       headerName: "ID",
-      width: 80,
+      width: 70,
     },
     {
       field: "product_name",
-      headerName: "Product",
-      flex: 1,
-      valueGetter: (_, row) =>
-        products.find(
-          (p) => p.product_id === row.product_id
-        )?.product_name || row.product_id,
+      headerName: "Product SKU",
+      flex: 1.2,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={600}>
+          {params.value}
+        </Typography>
+      ),
     },
     {
       field: "supplier_name",
-      headerName: "Supplier",
-      flex: 1,
-      valueGetter: (_, row) =>
-        suppliers.find(
-          (s) => s.supplier_id === row.supplier_id
-        )?.supplier_name || row.supplier_id,
+      headerName: "Sourcing Partner",
+      flex: 1.2,
     },
     {
       field: "negotiated_price",
-      headerName: "Negotiated Price",
-      width: 170,
-      valueFormatter: (value) =>
-        `₹ ${Number(value).toLocaleString()}`,
+      headerName: "Contracted Cost",
+      width: 150,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={600}>
+          ${Number(params.value || 0).toFixed(2)}
+        </Typography>
+      ),
     },
     {
       field: "is_preferred",
-      headerName: "Preferred",
-      width: 120,
-      valueFormatter: (value) =>
-        value ? "Yes" : "No",
+      headerName: "Priority",
+      width: 130,
+      renderCell: (params) => (
+        <Chip
+          label={params.value ? "Preferred" : "Alternate"}
+          color={params.value ? "success" : "default"}
+          size="small"
+          sx={{ fontWeight: 600, borderRadius: 1.5, height: 22 }}
+        />
+      ),
     },
     {
       field: "contract_end",
-      headerName: "Contract Ends",
-      width: 150,
+      headerName: "Contract Expiration",
+      flex: 1,
+      valueFormatter: (value) => (value ? new Date(value).toLocaleDateString() : "Active"),
     },
   ];
 
@@ -325,11 +219,11 @@ function ProductSuppliers() {
   }
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
-        title="Product Suppliers"
-        subtitle="Manage product and supplier relationships."
-        icon={<HandshakeRoundedIcon />}
+        title="Product-Supplier Mapping"
+        subtitle="Manage supplier contracts, negotiated pricing schedules, and primary sourcing preference for each product"
+        icon={<LinkRoundedIcon color="primary" />}
         action={
           <Button
             variant="contained"
@@ -339,41 +233,51 @@ function ProductSuppliers() {
               setOpenDialog(true);
             }}
           >
-            Add Product Supplier
+            Assign Supplier to SKU
           </Button>
         }
       />
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error">{error}</Alert>}
 
-      <SearchBar
-        placeholder="Search product suppliers..."
-        onSearch={handleSearch}
-      />
+      <Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          mb={2}
+        >
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Contract Mappings
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {filteredProductSuppliers.length} active supplier-to-product relationships
+            </Typography>
+          </Box>
+          <SearchBar placeholder="Search by SKU or supplier..." onSearch={handleSearch} />
+        </Stack>
 
-      {filteredProductSuppliers.length === 0 ? (
-        <EmptyState
-          title="No Product Suppliers"
-          subtitle="No relationships found."
-        />
-      ) : (
-        <EntityTable
-          rows={filteredProductSuppliers}
-          columns={columns}
-          getRowId={(row) =>
-            row.product_supplier_id
-          }
-          loading={loading}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
+        {filteredProductSuppliers.length === 0 ? (
+          <EmptyState
+            title="No Sourcing Mappings Found"
+            subtitle="No supplier-product relationships match your search criteria."
+          />
+        ) : (
+          <EntityTable
+            rows={filteredProductSuppliers}
+            columns={columns}
+            getRowId={(row) => row.product_supplier_id}
+            loading={loading}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        )}
+      </Box>
 
+      {/* Dialogs */}
       <ProductSupplierDialog
         open={openDialog}
         onClose={() => {
@@ -381,50 +285,31 @@ function ProductSuppliers() {
           setSelectedProductSupplier(null);
         }}
         onSave={handleSave}
-        productSupplier={
-          selectedProductSupplier
-        }
+        productSupplier={selectedProductSupplier}
         products={products}
         suppliers={suppliers}
       />
 
       <ProductSupplierViewDialog
         open={viewDialog}
-        onClose={() =>
-          setViewDialog(false)
-        }
-        productSupplier={
-          selectedProductSupplier
-        }
-        products={products}
-        suppliers={suppliers}
+        onClose={() => setViewDialog(false)}
+        productSupplier={selectedProductSupplier}
       />
 
       <ConfirmDialog
         open={deleteDialog}
-        title="Delete Product Supplier"
-        message={`Delete this product supplier relationship?`}
-        onClose={() =>
-          setDeleteDialog(false)
-        }
+        title="Remove Sourcing Mapping"
+        message="Are you sure you want to delete this supplier association?"
+        onClose={() => setDeleteDialog(false)}
         onConfirm={confirmDelete}
       />
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() =>
-          setSnackbar({
-            ...snackbar,
-            open: false,
-          })
-        }
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <MuiAlert
-          elevation={6}
-          variant="filled"
-          severity={snackbar.severity}
-        >
+        <MuiAlert elevation={6} variant="filled" severity={snackbar.severity}>
           {snackbar.message}
         </MuiAlert>
       </Snackbar>

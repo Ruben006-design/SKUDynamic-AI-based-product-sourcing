@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-
 import {
   Box,
   Button,
   Alert,
   Snackbar,
   Chip,
+  Stack,
+  Typography,
 } from "@mui/material";
-
 import MuiAlert from "@mui/material/Alert";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
@@ -31,20 +31,13 @@ import RetailerViewDialog from "../components/retailer/RetailerViewDialog";
 
 function Retailers() {
   const [retailers, setRetailers] = useState([]);
-  const [filteredRetailers, setFilteredRetailers] =
-    useState([]);
+  const [filteredRetailers, setFilteredRetailers] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [openDialog, setOpenDialog] =
-    useState(false);
-
-  const [viewDialog, setViewDialog] =
-    useState(false);
-
-  const [selectedRetailer, setSelectedRetailer] =
-    useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [selectedRetailer, setSelectedRetailer] = useState(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -59,11 +52,9 @@ function Retailers() {
   async function loadRetailers() {
     try {
       setLoading(true);
-
       const data = await getRetailers();
-
-      setRetailers(data);
-      setFilteredRetailers(data);
+      setRetailers(data || []);
+      setFilteredRetailers(data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load retailers.");
@@ -72,10 +63,7 @@ function Retailers() {
     }
   }
 
-  const showMessage = (
-    message,
-    severity = "success"
-  ) => {
+  const showMessage = (message, severity = "success") => {
     setSnackbar({
       open: true,
       message,
@@ -85,39 +73,23 @@ function Retailers() {
 
   const handleSearch = (value) => {
     const search = value.toLowerCase();
-
     setFilteredRetailers(
       retailers.filter(
-        (retailer) =>
-          retailer.retailer_name
-            ?.toLowerCase()
-            .includes(search) ||
-          retailer.industry_type
-            ?.toLowerCase()
-            .includes(search) ||
-          retailer.contact_email
-            ?.toLowerCase()
-            .includes(search) ||
-          retailer.plan_tier
-            ?.toLowerCase()
-            .includes(search)
+        (r) =>
+          r.retailer_name?.toLowerCase().includes(search) ||
+          r.industry_type?.toLowerCase().includes(search) ||
+          r.contact_email?.toLowerCase().includes(search)
       )
     );
   };
 
   async function handleView(row) {
     try {
-      const retailer = await getRetailer(
-        row.retailer_id
-      );
-
+      const retailer = await getRetailer(row.retailer_id);
       setSelectedRetailer(retailer);
       setViewDialog(true);
-    } catch (err) {
-      showMessage(
-        "Unable to fetch retailer.",
-        "error"
-      );
+    } catch {
+      showMessage("Unable to fetch retailer details.", "error");
     }
   }
 
@@ -126,92 +98,77 @@ function Retailers() {
     setOpenDialog(true);
   }
 
-  async function handleSave(form) {
+  async function handleSave(data) {
     try {
       if (selectedRetailer) {
-        await updateRetailer(
-          selectedRetailer.retailer_id,
-          form
-        );
-
-        showMessage(
-          "Retailer updated successfully."
-        );
+        await updateRetailer(selectedRetailer.retailer_id, data);
+        showMessage("Retailer updated successfully.");
       } else {
-        await createRetailer(form);
-
-        showMessage(
-          "Retailer created successfully."
-        );
+        await createRetailer(data);
+        showMessage("Retailer created successfully.");
       }
-
       setOpenDialog(false);
-      setSelectedRetailer(null);
-
       loadRetailers();
-    } catch (err) {
-      console.error(err);
-
-      showMessage(
-        "Operation failed.",
-        "error"
-      );
+    } catch {
+      showMessage("Failed to save retailer.", "error");
     }
   }
-    const columns = [
+
+  const columns = [
     {
       field: "retailer_id",
       headerName: "ID",
-      width: 80,
+      width: 70,
     },
     {
       field: "retailer_name",
-      headerName: "Retailer",
+      headerName: "Retailer / Entity",
       flex: 1.3,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight={600}>
+          {params.value}
+        </Typography>
+      ),
     },
     {
       field: "industry_type",
-      headerName: "Industry",
+      headerName: "Sector / Vertical",
       flex: 1,
+      renderCell: (params) => (
+        <Chip
+          label={params.value || "Retail"}
+          size="small"
+          variant="outlined"
+          sx={{ fontSize: "0.72rem", height: 22 }}
+        />
+      ),
     },
     {
       field: "contact_email",
-      headerName: "Email",
-      flex: 1.5,
+      headerName: "Billing & Contact Email",
+      flex: 1.4,
     },
     {
       field: "plan_tier",
-      headerName: "Plan",
-      width: 150,
+      headerName: "Service Tier",
+      width: 140,
       renderCell: (params) => {
-        const value = params.value;
-
-        let color = "default";
-
-        if (value === "enterprise") {
-          color = "secondary";
-        } else if (value === "growth") {
-          color = "primary";
-        }
-
+        const value = (params.value || "standard").toLowerCase();
         return (
           <Chip
-            label={
-              value.charAt(0).toUpperCase() +
-              value.slice(1)
-            }
-            color={color}
+            label={value.charAt(0).toUpperCase() + value.slice(1)}
+            color={value === "enterprise" ? "secondary" : "primary"}
             size="small"
+            sx={{ fontWeight: 600, borderRadius: 1.5, height: 22 }}
           />
         );
       },
     },
     {
       field: "created_at",
-      headerName: "Created",
-      width: 180,
-      valueFormatter: (value) =>
-        new Date(value).toLocaleDateString(),
+      headerName: "Onboarding Date",
+      flex: 1,
+      valueFormatter: (value) => (value ? new Date(value).toLocaleDateString() : "Active"),
     },
   ];
 
@@ -220,11 +177,11 @@ function Retailers() {
   }
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
-        title="Retailers"
-        subtitle="Manage retailers using SKUDynamic."
-        icon={<StorefrontRoundedIcon />}
+        title="Retail Client Entities"
+        subtitle="Manage business units, enterprise retailers, subscription tiers, and inventory tenant scopes"
+        icon={<StorefrontRoundedIcon color="primary" />}
         action={
           <Button
             variant="contained"
@@ -239,37 +196,46 @@ function Retailers() {
         }
       />
 
-      {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          mb={2}
         >
-          {error}
-        </Alert>
-      )}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Registered Retail Accounts
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {filteredRetailers.length} tenant facilities configured
+            </Typography>
+          </Box>
+          <SearchBar placeholder="Search by name, sector, or email..." onSearch={handleSearch} />
+        </Stack>
 
-      <SearchBar
-        placeholder="Search retailers..."
-        onSearch={handleSearch}
-      />
+        {filteredRetailers.length === 0 ? (
+          <EmptyState
+            title="No Retailers Found"
+            subtitle="No retail client entities matching your search query."
+          />
+        ) : (
+          <EntityTable
+            rows={filteredRetailers}
+            columns={columns}
+            getRowId={(row) => row.retailer_id}
+            loading={loading}
+            onView={handleView}
+            onEdit={handleEdit}
+            showActions={true}
+          />
+        )}
+      </Box>
 
-      {filteredRetailers.length === 0 ? (
-        <EmptyState
-          title="No Retailers"
-          subtitle="No retailer records found."
-        />
-      ) : (
-        <EntityTable
-          rows={filteredRetailers}
-          columns={columns}
-          getRowId={(row) => row.retailer_id}
-          loading={loading}
-          onView={handleView}
-          onEdit={handleEdit}
-          showDelete={false}
-        />
-      )}
-
+      {/* Dialogs */}
       <RetailerDialog
         open={openDialog}
         onClose={() => {
@@ -289,18 +255,9 @@ function Retailers() {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() =>
-          setSnackbar({
-            ...snackbar,
-            open: false,
-          })
-        }
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <MuiAlert
-          elevation={6}
-          variant="filled"
-          severity={snackbar.severity}
-        >
+        <MuiAlert elevation={6} variant="filled" severity={snackbar.severity}>
           {snackbar.message}
         </MuiAlert>
       </Snackbar>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import {
   Box,
   Grid,
@@ -7,28 +6,35 @@ import {
   Button,
   Card,
   CardContent,
+  Stack,
+  Divider,
 } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import AnalyticsRoundedIcon from "@mui/icons-material/AnalyticsRounded";
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
+import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
+import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
+import HighlightOffRoundedIcon from "@mui/icons-material/HighlightOffRounded";
 
 import {
   getOrderAnalytics,
   exportOrdersCSV,
 } from "../services/orderService";
-
 import { getWeightages } from "../services/weightageService";
 import { getProducts } from "../services/productService";
 import { getInventories } from "../services/inventoryService";
 
 import LoadingSpinner from "../components/common/LoadingSpinner";
-
 import KPICard from "../components/dashboard/KPICard";
 import ReportsCharts from "../components/dashboard/ReportsCharts";
+import PageHeader from "../components/common/PageHeader";
 
 function Reports() {
-  const [loading, setLoading] = useState(true);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
+  const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState({});
   const [weightages, setWeightages] = useState([]);
   const [products, setProducts] = useState([]);
@@ -52,10 +58,10 @@ function Reports() {
         getInventories(),
       ]);
 
-      setAnalytics(analyticsData);
-      setWeightages(weightagesData);
-      setProducts(productsData);
-      setInventories(inventoryData);
+      setAnalytics(analyticsData || {});
+      setWeightages(weightagesData || []);
+      setProducts(productsData || []);
+      setInventories(inventoryData || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -66,16 +72,13 @@ function Reports() {
   async function handleExport() {
     try {
       const blob = await exportOrdersCSV();
-
       const url = window.URL.createObjectURL(blob);
-
       const a = document.createElement("a");
-
       a.href = url;
-      a.download = "orders.csv";
-
+      a.download = "orders_export.csv";
+      document.body.appendChild(a);
       a.click();
-
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
@@ -83,260 +86,87 @@ function Reports() {
   }
 
   if (loading) return <LoadingSpinner />;
-    return (
-    <Box>
-      {/* Hero Header */}
-      <Box
-        sx={{
-          mb: 4,
-          p: 4,
-          borderRadius: 5,
-          background:
-            "linear-gradient(135deg,#2563EB,#4F46E5,#7C3AED)",
-          color: "white",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <Typography variant="h3" fontWeight={800}>
-          Reports & Analytics
-        </Typography>
 
-        <Typography
-          sx={{
-            mt: 1,
-            opacity: 0.9,
-            fontSize: 18,
-          }}
-        >
-          AI Powered Inventory Intelligence Dashboard
-        </Typography>
+  const totalOrders = analytics.total_orders || 0;
+  const approvedOrders = analytics.approved_orders || 0;
+  const pendingOrders = analytics.pending_orders || 0;
+  const rejectedOrders = analytics.rejected_orders || 0;
 
-        <Grid container spacing={3} sx={{ mt: 2 }}>
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Typography variant="h4" fontWeight={800}>
-              {products.length}
-            </Typography>
-            <Typography variant="body2">
-              Products
-            </Typography>
-          </Grid>
+  const approvalRate =
+    totalOrders > 0 ? Math.round((approvedOrders / totalOrders) * 100) : 0;
 
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Typography variant="h4" fontWeight={800}>
-              {weightages.length}
-            </Typography>
-            <Typography variant="body2">
-              AI Weightages
-            </Typography>
-          </Grid>
-
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Typography variant="h4" fontWeight={800}>
-              {analytics.total_orders ?? 0}
-            </Typography>
-            <Typography variant="body2">
-              Orders
-            </Typography>
-          </Grid>
-
-          <Grid size={{ xs: 6, md: 2 }}>
-            <Typography variant="h4" fontWeight={800}>
-              {inventories.length}
-            </Typography>
-            <Typography variant="body2">
-              Inventory
-            </Typography>
-          </Grid>
-
-          <Grid
-            size={{ xs: 12, md: 4 }}
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-            }}
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {/* Header */}
+      <PageHeader
+        title="Procurement & Sourcing Analytics"
+        subtitle="Comprehensive breakdown of order approvals, stock turnover, and AI scoring metrics"
+        icon={<AssessmentRoundedIcon color="primary" />}
+        action={
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<DownloadRoundedIcon />}
+            onClick={handleExport}
           >
-            <Button
-              variant="contained"
-              startIcon={<DownloadRoundedIcon />}
-              onClick={handleExport}
-              sx={{
-                bgcolor: "white",
-                color: "#2563EB",
-                fontWeight: 700,
-                px: 4,
-                "&:hover": {
-                  bgcolor: "#F8FAFC",
-                },
-              }}
-            >
-              Export AI Report
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
+            Export Orders CSV
+          </Button>
+        }
+      />
 
-      {/* KPI Cards */}
-
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 3 }}>
+      {/* KPI Performance Bar */}
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Products"
-            value={products.length}
-            icon={<AnalyticsRoundedIcon />}
+            title="Total Procurement Orders"
+            value={totalOrders}
+            icon={<AssessmentRoundedIcon />}
+            color="#3B82F6"
+            subtitle="Logged replenishment orders"
+            badgeText={`${totalOrders} Processed`}
+            badgeColor="primary"
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <KPICard
-            title="Weightages"
+            title="Approval Efficiency"
+            value={`${approvalRate}%`}
+            icon={<CheckCircleOutlineRoundedIcon />}
+            color="#10B981"
+            subtitle={`${approvedOrders} approved by procurement`}
+            badgeText="Operational"
+            badgeColor="success"
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <KPICard
+            title="Pending Review"
+            value={pendingOrders}
+            icon={<PendingActionsRoundedIcon />}
+            color="#F59E0B"
+            subtitle="Requires manager sign-off"
+            badgeText={pendingOrders > 0 ? "Action Required" : "Cleared"}
+            badgeColor={pendingOrders > 0 ? "warning" : "default"}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <KPICard
+            title="Calibrated Weightages"
             value={weightages.length}
-            icon={<AnalyticsRoundedIcon />}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 3 }}>
-          <KPICard
-            title="Orders"
-            value={analytics.total_orders ?? 0}
-            icon={<AnalyticsRoundedIcon />}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 3 }}>
-          <KPICard
-            title="Inventory"
-            value={inventories.length}
-            icon={<AnalyticsRoundedIcon />}
+            icon={<CheckCircleOutlineRoundedIcon />}
+            color="#8B5CF6"
+            subtitle="Active SKU score profiles"
+            badgeText="Local Engine"
+            badgeColor="secondary"
           />
         </Grid>
       </Grid>
 
-      {/* AI Insights */}
-
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Card
-            sx={{
-              borderRadius: 4,
-              background:
-                "linear-gradient(135deg,#1E293B,#111827)",
-            }}
-          >
-            <CardContent>
-              <Typography color="text.secondary">
-                Average Recommendation
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-              >
-                {weightages.length
-                  ? (
-                      weightages.reduce(
-                        (sum, w) =>
-                          sum + Number(w.recommendation_score),
-                        0
-                      ) / weightages.length
-                    ).toFixed(2)
-                  : 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Card
-            sx={{
-              borderRadius: 4,
-              background:
-                "linear-gradient(135deg,#1E293B,#111827)",
-            }}
-          >
-            <CardContent>
-              <Typography color="text.secondary">
-                AI Model
-              </Typography>
-
-              <Typography
-                variant="h5"
-                fontWeight={700}
-              >
-                Gemini 2.5 Flash
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Card
-            sx={{
-              borderRadius: 4,
-              background:
-                "linear-gradient(135deg,#1E293B,#111827)",
-            }}
-          >
-            <CardContent>
-              <Typography color="text.secondary">
-                Approved Orders
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-              >
-                {analytics.approved_orders ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Card
-            sx={{
-              borderRadius: 4,
-              background:
-                "linear-gradient(135deg,#1E293B,#111827)",
-            }}
-          >
-            <CardContent>
-              <Typography color="text.secondary">
-                Rejected Orders
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-              >
-                {analytics.rejected_orders ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Charts */}
-
-      <Card
-        sx={{
-          mt: 4,
-          borderRadius: 5,
-          background:
-            "linear-gradient(135deg,#111827,#1E293B)",
-          border:
-            "1px solid rgba(255,255,255,.08)",
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <ReportsCharts
-            analytics={analytics}
-            weightages={weightages}
-            inventories={inventories}
-          />
-        </CardContent>
-      </Card>
+      {/* Visual Analytics Charts */}
+      <ReportsCharts analytics={analytics} weightages={weightages} />
     </Box>
   );
 }
